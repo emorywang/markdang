@@ -1,0 +1,7 @@
+{
+  "description": { "message": "Read Markdown comfortably in your browser. No accounts, subscriptions, or telemetry." },
+  "toggleSide": { "message": "Toggle sidebar" },
+  "toggleCentered": { "message": "Toggle centered layout" },
+  "toggleRefresh": { "message": "Toggle auto refresh" },
+  "toggleTheme": { "message": "Cycle page theme" }
+}

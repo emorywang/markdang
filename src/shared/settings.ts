@@ -1,4 +1,5 @@
 import { sendMessage } from './ipc'
+import { normalizeLanguage, type Language } from './i18n'
 
 /* Storage keys remain stable; old and partial records are normalized on read. */
 
@@ -78,7 +79,7 @@ export interface Settings {
   refreshInterval: number
   charsetCompat: boolean
   charset: string
-  language: string
+  language: Language
   /* appearance */
   pageTheme: Theme
   codeBlockDayTheme: CodeTheme
@@ -136,7 +137,7 @@ export function defaultSettings(): Settings {
     refreshInterval: 0.5,
     charsetCompat: false,
     charset: 'utf-8',
-    language: globalThis.chrome?.i18n?.getUILanguage?.() ?? 'en',
+    language: 'auto',
     pageTheme: 'auto',
     codeBlockDayTheme: 'light',
     codeBlockNightTheme: 'dark',
@@ -218,6 +219,7 @@ function choice<T extends string>(value: T, values: readonly T[], fallback: T): 
 
 export function normalizeSettings(value: unknown): Settings {
   const s = mergeKnown(defaultSettings(), value) as Settings
+  s.language = normalizeLanguage(s.language)
   s.mdPlugins = [...new Set(s.mdPlugins.filter(name => MD_PLUGIN_LIST.includes(name as typeof MD_PLUGIN_LIST[number])))]
   s.pageTheme = choice(s.pageTheme, ['auto', 'light', 'dark'], 'auto')
   s.codeBlockDayTheme = choice(s.codeBlockDayTheme, ['light', 'dark'], 'light')

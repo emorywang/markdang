@@ -9,7 +9,7 @@ const DEMO = furl('demo/full-feature-test.md')
 
 fs.mkdirSync(OUT, { recursive: true })
 
-const { context: ctx, extId } = await launchExtension()
+const { context: ctx, extId } = await launchExtension({ language: 'zh-CN' })
 
 const storage = await ctx.newPage()
 await storage.goto(`chrome-extension://${extId}/src/popup/index.html`)

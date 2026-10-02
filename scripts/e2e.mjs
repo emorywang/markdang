@@ -29,7 +29,7 @@ const server = http.createServer(async (req, res) => {
 await new Promise(res => server.listen(0, '127.0.0.1', res))
 const origin = `http://127.0.0.1:${server.address().port}`
 
-const { context: context, extId } = await launchExtension()
+const { context: context, extId } = await launchExtension({ language: 'zh-CN' })
 
 const manifestText = await readFile(path.join(EXT, 'manifest.json'), 'utf8')
 const manifest = JSON.parse(manifestText)

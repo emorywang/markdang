@@ -1,0 +1,7 @@
+{
+  "description": { "message": "码刻档 —— 在浏览器中舒适阅读 Markdown。无账号、无订阅、无遥测。" },
+  "toggleSide": { "message": "切换侧边栏" },
+  "toggleCentered": { "message": "切换居中" },
+  "toggleRefresh": { "message": "切换自动刷新" },
+  "toggleTheme": { "message": "切换页面主题" }
+}

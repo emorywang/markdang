@@ -1,5 +1,7 @@
 # Architecture
 
+[简体中文](architecture.zh-CN.md) · [README](../README.md)
+
 MarkDang is a Manifest V3 extension with four runtime components:
 
 | Component | Responsibility |
@@ -15,6 +17,14 @@ MarkDang is a Manifest V3 extension with four runtime components:
 
 All application writes go through the service worker's FIFO queue. It merges each patch against the latest stored preferences and writes only the affected top-level keys. This prevents rapid UI changes and changes from separate extension pages from overwriting unrelated preferences. Partial plugin patches contain only the modified plugin fields. Settings changes are observed only in the `local` storage area.
 
+## Interface language
+
+`src/shared/i18n.ts` stores complete, type-checked Chinese/English text pairs. The `language` preference is `auto`, `zh-CN`, or `en`; Auto reads `chrome.i18n.getUILanguage()` first. Chinese variants use Simplified Chinese, and other languages fall back to English.
+
+Options and popup share a translation context. The reader updates controls, fold labels, and directory hints without parsing Markdown again or rebuilding content, preserving the reading position, task state, and outline folds. Document text, code, and filenames are not translated.
+
+Browser-managed descriptions and shortcut labels use native localization under `public/_locales/`, with English as the default. Both Chinese regions use the same Simplified Chinese text. These labels follow the browser independently of manual interface choices.
+
 ## Local files
 
 Content scripts cannot fetch `file:` resources directly. A reader asks the worker to open the current file or its immediate parent directory in an inactive tab. The tab URL contains a unique probe marker. At startup, the content script asks the worker whether that exact tab is a probe, reports its raw text or directory entries, and skips the reader UI only for a confirmed probe.
@@ -27,7 +37,7 @@ Ordinary inactive tabs still render normally. Web documents use same-origin requ
 
 A fresh markdown-it renderer is configured from the active plugins. The pipeline handles front matter, headings and TOC, math, tables, alerts, and diagram placeholders. Heading IDs are assigned before TOC generation, including headings omitted from the TOC. IDs remain unique when titles repeat or already contain numeric suffixes. TOC lists form a tree without empty intermediate lists.
 
-Before any document HTML reaches the live DOM, DOMPurify removes executable markup, forms, active embeds, stylesheets, and unsafe URLs. Metadata values and generated attribute values are escaped. Task checkboxes remain supported. Raw source is retained separately from the rendered DOM.
+Before any document HTML reaches the live DOM, DOMPurify removes executable markup, forms, active embeds, stylesheets, and unsafe URLs. Metadata values and generated attribute values are escaped. Cleaned HTML is reparsed into fresh nodes to avoid carrying parser-cached event handlers across Chromium's extension isolation boundary. Task checkboxes remain supported. Raw source is retained separately from the rendered DOM.
 
 Mermaid is imported lazily from the installed extension package. Rendering is serialized and versioned so an old asynchronous render cannot replace newer content. Security stays `strict` regardless of user JSON or diagram directives; generated SVG is sanitized as well. Interactive Mermaid callbacks and HTML labels are intentionally unavailable. Invalid diagrams retain their source and display a text error.
 

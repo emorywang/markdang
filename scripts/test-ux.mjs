@@ -9,7 +9,7 @@ const ok = (name, cond, extra = '') => {
   console.log(`${cond ? 'PASS' : 'FAIL'}  ${name}${extra ? ' | ' + extra : ''}`)
 }
 
-const { context: ctx, extId } = await launchExtension()
+const { context: ctx, extId } = await launchExtension({ language: 'zh-CN' })
 
 const page = await ctx.newPage()
 await page.goto(furl('tests/fixtures/a.md'))

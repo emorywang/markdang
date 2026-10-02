@@ -23,7 +23,7 @@ The screenshots illustrate the initial 1.0.0 design; minor controls may differ i
 
 MDX files are treated as Markdown: JSX, imports, and JavaScript are not executed. HTML website pages, download responses, protected browser pages, and extensionless web URLs are not automatically converted. Web URLs must match a supported extension; lowercase and uppercase suffixes are supported, including query strings.
 
-The interface currently uses Simplified Chinese. [The settings reference](docs/settings.md) documents all supported options and defaults.
+The interface supports English and Simplified Chinese. **Auto** follows the browser's display language: Chinese uses Simplified Chinese, and all other languages use English. Choose a language in **General → Interface language**; open settings and reader tabs update immediately. [The settings reference](docs/settings.md) documents all supported options and defaults.
 
 ## Install
 
@@ -94,3 +94,7 @@ The implementation uses TypeScript, Preact, Vite 7, markdown-it, DOMPurify, KaTe
 MarkDang's code is **source-available for noncommercial use** under the [PolyForm Noncommercial License 1.0.0](LICENSE). Commercial use requires separate permission. The license restricts commercial use itself, not only selling derivative software. It is not an OSI-approved open-source license.
 
 Names, logos, icons, and visual identity are reserved brand assets. Distributed forks and derivative products must use a distinct identity and preserve attribution; see [TRADEMARKS.md](TRADEMARKS.md) and [NOTICE](NOTICE). Third-party software and fonts retain their own licenses. Release packages include their license texts.
+
+## Support
+
+[Buy me a coffee to support my work.](https://ko-fi.com/emorywang)

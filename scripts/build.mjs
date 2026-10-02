@@ -28,7 +28,7 @@ function build() {
     const safe = text.replace(/\uFFFE/g, '\\uFFFE').replace(/\uFFFF/g, '\\uFFFF')
     if (safe !== text) fs.writeFileSync(file, safe)
   }
-  for (const name of ['LICENSE', 'NOTICE', 'TRADEMARKS.md', 'PRIVACY.md']) {
+  for (const name of ['LICENSE', 'NOTICE', 'TRADEMARKS.md', 'PRIVACY.md', 'PRIVACY.zh-CN.md']) {
     fs.copyFileSync(path.join(root, name), path.join(root, 'extension', name))
   }
   const formulaFonts = path.join(root, 'extension/fonts/katex')
@@ -57,7 +57,7 @@ if (process.argv.includes('--watch')) {
     }, 300)
   }
   for (const dir of ['src', 'public']) fs.watch(path.join(root, dir), { recursive: true }, changed)
-  for (const name of ['vite.config.ts', 'package.json', 'package-lock.json', 'LICENSE', 'NOTICE', 'TRADEMARKS.md', 'PRIVACY.md']) {
+  for (const name of ['vite.config.ts', 'package.json', 'package-lock.json', 'LICENSE', 'NOTICE', 'TRADEMARKS.md', 'PRIVACY.md', 'PRIVACY.zh-CN.md']) {
     fs.watch(path.join(root, name), changed)
   }
   console.log('Watching source files. Reload the extension after each build.')

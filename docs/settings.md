@@ -1,34 +1,37 @@
-# Settings reference / 设置参考
+# Settings reference
 
-Settings are saved locally in the current browser profile and apply to open reader tabs. The interface currently uses Simplified Chinese. The demo illustrates Markdown syntax and common reading options; automated suites cover additional lifecycle and persistence behavior.
+[简体中文](settings.zh-CN.md) · [README](../README.md)
 
-## Reading and appearance / 阅读与外观
+Settings are saved locally in the current browser profile and apply to open reader tabs. English and Simplified Chinese are available; Auto is the default. The demo illustrates Markdown syntax and common reading options; automated suites cover additional lifecycle and persistence behavior.
 
-| Storage key | Default | Behavior / 说明 |
+## Reading and appearance
+
+| Storage key | Default | Behavior |
 | --- | --- | --- |
-| `enable` | `true` | Master switch; changes reload the current eligible page / 总开关 |
-| `enableFolderUrl` | `true` | Render local directory listings / 本地目录阅读视图 |
-| `enableTxtExt` | `true` | Read `.txt` as Markdown / 将 txt 视为 Markdown |
-| `refresh` | `false` | Poll the current document; local files use temporary inactive tabs / 自动刷新 |
-| `refreshInterval` | `0.5` | Seconds, clamped to 0.5–600 / 秒 |
-| `pageTheme` | `auto` | `light`, `dark`, or system-following `auto` / 页面主题 |
+| `enable` | `true` | Master switch; changes reload the current eligible page |
+| `language` | `auto` | `auto`, `zh-CN`, or `en`. Auto uses the browser UI language: Chinese → Simplified Chinese; everything else → English. Manual choices take precedence. Open settings, popup, and reader labels update immediately without re-rendering document content |
+| `enableFolderUrl` | `true` | Render local directory listings |
+| `enableTxtExt` | `true` | Read `.txt` as Markdown |
+| `refresh` | `false` | Poll the current document; local files use temporary inactive tabs |
+| `refreshInterval` | `0.5` | Seconds, clamped to 0.5–600 |
+| `pageTheme` | `auto` | `light`, `dark`, or system-following `auto` |
 | `codeBlockDayTheme` | `light` | Code palette on a light page: `light` or `dark` |
 | `codeBlockNightTheme` | `dark` | Code palette on a dark page: `light` or `dark` |
-| `textSize` | `Medium` | Tiny 12, Small 14, Normal 16, Medium 18, Large 20, Extra Large 24 px |
+| `textSize` | `Medium` | Tiny 12, Small 14, Normal 16, Medium 18, Large 20, Extra Large 24 px; applies to content independently of sidebar text |
 | `textFont` | `Default` | `Default`, `System`, `Serif`, `Monospace` |
-| `centered` | `true` | Center the content within the reading area / 内容居中 |
+| `centered` | `true` | Center the content within the reading area |
 | `enableCustomContentWidth` | `false` | Use the custom maximum width; otherwise 1000 px |
 | `customContentData` | `{unit: 'px', maxWidth: 1000, maxPercent: 50}` | `px`: 500–3000; `%`: 10–100 of the reading area |
-| `codeWrap` | `false` | Wrap long code lines / 代码换行 |
+| `codeWrap` | `false` | Wrap long code lines |
 | `zenMode` | `false` | Hide the sidebar and controls except the exit button; Esc exits |
 | `enableCustomCSS` | `false` | Apply the saved custom stylesheet |
 | `customCSS` | `''` | Saved on **Apply CSS**; **Cancel** restores the saved draft. External CSS resources may generate requests |
 | `isOutlineExpandable` | `true` | Show fold controls; disabling reveals folded headings |
-| `sideCollapsed` | `false` | Remember sidebar visibility / 记忆侧栏状态 |
+| `sideCollapsed` | `false` | Remember sidebar visibility |
 
 Local file access is a browser permission, not a storage setting. The settings page shows whether it is granted and links to the extension's details page. The browser must grant **Allow access to file URLs** before the extension can read local documents or directories.
 
-## Plugins / 插件
+## Plugins
 
 `mdPlugins` is the list of enabled plugin names. All below are enabled by default **except PlantUML**. The bulk toggle affects only local rendering plugins and preserves the separate PlantUML choice.
 
@@ -50,12 +53,16 @@ Local file access is a browser permission, not a storage setting. The settings p
 | `TaskLists` | `enabled`, `label`, `labelAfter`: all `false`. `enabled` allows clicks; `label` wraps the item text; `labelAfter` displays text before the checkbox and turns on `label` in the UI. Changes are not written back to the source |
 | `Alert` | `alertNames: ['important','note','tip','warning','caution']`; optional `info`, `danger`; `deep: false`. `infoContainer`, `tipContainer`, `successContainer`, `warningContainer`, `dangerContainer`: all `true`, controlling the corresponding `::: name` containers |
 
-## Sidebar / 侧栏
+## Sidebar
 
 Outline and file filters run locally. Searching the outline reveals matching headings even inside folded sections. Directory sorting supports names and, where the browser supplies them, file sizes and dates. Folders-first and dotfile visibility are independent choices. Directory filter/sort choices last for the current page; sidebar visibility is persisted.
+
+Reader sidebar text uses a 15 px base, with 15 px outline entries. The standalone settings menu uses 15 px text; the popup menu uses 14 px.
 
 The file panel lists supported Markdown extensions and subdirectories; it does not list `.txt` files. Web directory browsing requires a readable HTML directory index. File system attributes marked hidden without a leading dot cannot be identified through the browser's directory listing.
 
 ## Retained compatibility keys
 
-`charsetCompat`, `charset`, `language`, `maxOutlineExpandLevel`, and `skipGuide` were stored placeholders without implemented controls. They remain readable for compatibility, but do not control current behavior. The inactive character-set and language selectors have been removed. Use UTF-8 source files. Legacy `mode: 'zen'` is understood as zen mode; the UI uses `zenMode`.
+`charsetCompat`, `charset`, `maxOutlineExpandLevel`, and `skipGuide` were stored placeholders without implemented controls. They remain readable for compatibility, but do not control current behavior. The inactive character-set selector has been removed; use UTF-8 source files. Legacy `mode: 'zen'` is understood as zen mode; the UI uses `zenMode`.
+
+The `language` key now controls the interface. Legacy `zh-*`/`zh_*` values map to `zh-CN`, `en-*`/`en_*` values map to `en`, and unsupported values map to `auto`. Resetting preferences restores Auto. Browser-managed extension descriptions and shortcut labels follow the browser language independently of the manual interface choice.

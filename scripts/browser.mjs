@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright-core'
 
 export const ROOT = fileURLToPath(new URL('../', import.meta.url))
-export async function launchExtension() {
+export async function launchExtension({ language } = {}) {
   const extension = path.join(ROOT, 'extension')
   if (!fs.existsSync(path.join(extension, 'manifest.json'))) throw new Error('Run npm run build before browser tests')
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'markdang-test-'))
@@ -26,6 +26,7 @@ export async function launchExtension() {
     let worker = context.serviceWorkers()[0]
     worker ??= await context.waitForEvent('serviceworker', { timeout: 15000 })
     const extId = new URL(worker.url()).hostname
+    if (language) await worker.evaluate(language => chrome.storage.local.set({ language }), language)
     const manager = await context.newPage()
     await manager.goto('chrome://extensions')
     const error = await manager.evaluate(id => new Promise(resolve => {

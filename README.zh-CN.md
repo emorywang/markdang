@@ -2,7 +2,7 @@
 
 MarkDang 在 Chrome 和 Edge 中将 Markdown 文档转换为舒适的阅读视图，提供大纲和可选的文件目录浏览。无账号、无订阅、无遥测。
 
-[English](README.md) · [设置参考](docs/settings.md) · [开发指南](docs/development.md) · [隐私声明](PRIVACY.md)
+[English](README.md) · [设置参考](docs/settings.zh-CN.md) · [开发指南](docs/development.zh-CN.md) · [隐私声明](PRIVACY.zh-CN.md)
 
 [![Build](https://github.com/emorywang/markdang/actions/workflows/build.yml/badge.svg)](https://github.com/emorywang/markdang/actions/workflows/build.yml)
 [![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-orange)](LICENSE)
@@ -23,7 +23,7 @@ MarkDang 在 Chrome 和 Edge 中将 Markdown 文档转换为舒适的阅读视�
 
 MDX 按 Markdown 读取，不执行 JSX、导入语句或 JavaScript。网页文档还需要服务器返回纯文本或 Markdown MIME 类型；普通 HTML 网页、下载响应、浏览器受保护页面和没有受支持扩展名的网页 URL 不会自动转换。扩展名支持全小写或全大写，包括带查询参数的形式。
 
-当前界面为简体中文，完整选项和默认值见 [设置参考](docs/settings.md)。网页目录浏览需要服务器提供可读取的 HTML 目录索引。
+界面支持简体中文和英文。默认「自动」跟随浏览器的界面语言：中文环境显示简体中文，其他语言环境显示英文。可在「通用 → 界面语言」手动选择，已打开的设置页和阅读器会立即更新。完整选项和默认值见 [设置参考](docs/settings.zh-CN.md)。网页目录浏览需要服务器提供可读取的 HTML 目录索引。
 
 ## 安装
 
@@ -71,7 +71,7 @@ npm run build
 
 文档解析、数学、代码高亮、Mermaid 和字体均在本地运行；设置保存在当前浏览器配置中。文档 HTML 和生成的 SVG 会进行安全清理；Mermaid 使用严格模式，不开放脚本交互。
 
-网页文档与远程图片仍会向其来源网站发起请求。**PlantUML 默认关闭，开启后会将图表源码发送至 www.plantuml.com。** 自定义 CSS 也可能加载远程资源。详见 [隐私声明](PRIVACY.md)。
+网页文档与远程图片仍会向其来源网站发起请求。**PlantUML 默认关闭，开启后会将图表源码发送至 www.plantuml.com。** 自定义 CSS 也可能加载远程资源。详见 [隐私声明](PRIVACY.zh-CN.md)。
 
 manifest 仅请求 `storage` API 权限，但内容脚本的 URL 匹配范围也授予页面访问能力；没有单独的 `host_permissions` 字段不代表没有页面权限。
 
@@ -85,7 +85,7 @@ npm run dev                           # 源码变更后重新构建
 npm run zip                           # 重新构建并打包
 ```
 
-测试数据位于仓库中，每套浏览器测试使用独立配置。开发与发布流程见 [开发指南](docs/development.md)、[架构说明](docs/architecture.md) 和 [发布清单](docs/publishing.md)。CI 运行相同检查与浏览器测试。
+测试数据位于仓库中，每套浏览器测试使用独立配置。开发与发布流程见 [开发指南](docs/development.zh-CN.md)、[架构说明](docs/architecture.zh-CN.md) 和 [发布清单](docs/publishing.zh-CN.md)。CI 运行相同检查与浏览器测试。
 
 项目使用 TypeScript、Preact、Vite 7、markdown-it、DOMPurify、KaTeX、highlight.js、Mermaid 和 pako。采用五段式构建；执行代码随扩展分发，Mermaid 仅在需要时从扩展包内加载。
 
@@ -94,3 +94,7 @@ npm run zip                           # 重新构建并打包
 本项目是 **Source Available for Noncommercial Use**，代码使用 [PolyForm Noncommercial License 1.0.0](LICENSE)。个人与非商业用途可依照许可证使用、修改及再发布，商业用途需单独授权。限制涵盖商业使用本身，不仅是销售二次开发版本；这不是 OSI 定义的开源许可证。
 
 名称、Logo、图标和视觉识别是保留权利的品牌资产。对外发布的 Fork 或衍生产品须采用不同品牌并保留署名，详见 [TRADEMARKS.md](TRADEMARKS.md) 和 [NOTICE](NOTICE)。第三方组件与字体保留各自许可证，发布包附带完整文本。
+
+## 支持开发
+
+喜欢码刻档？请我喝杯咖啡，支持后续开发：[爱发电](https://afdian.com/a/emory) · [Ko-fi](https://ko-fi.com/emorywang)。

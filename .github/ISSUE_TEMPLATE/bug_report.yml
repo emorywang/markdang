@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         感谢反馈！请提供扩展版本、浏览器版本与最小复现步骤；无需先运行项目测试。
-        Thanks! Please make sure you are on the latest build.
+        Thanks! Include the extension/browser versions and minimal reproduction steps; running project tests is not required.
   - type: input
     id: version
     attributes:
@@ -22,6 +22,9 @@ body:
         1. 打开 …
         2. 点击 …
         3. 出现 …
+        1. Open …
+        2. Click …
+        3. Observe …
     validations:
       required: true
   - type: textarea
@@ -47,9 +50,9 @@ body:
     id: sample
     attributes:
       label: 示例文件 / Sample markdown
-      description: 可脱敏的最小复现文件 / minimal reproducible markdown
+      description: 最小脱敏 Markdown 示例 / Minimal sanitized Markdown example
   - type: textarea
     id: extra
     attributes:
       label: 补充信息 / Extra
-      description: 控制台报错、截图、相关设置
+      description: 控制台报错、截图、相关设置 / Console errors, screenshots, relevant settings

@@ -5,6 +5,7 @@ import { createRenderer, slugify, uniqueHeadingId, mermaidThemeFor } from './mar
 import { sanitizeMarkdown, sanitizeDiagram } from './sanitize'
 import { READER_CSS } from './styles'
 import { SVG } from './icons'
+import { createTranslator, resolveLocale, type MessageKey } from '../shared/i18n'
 
 const MD_EXT = /\.(md|mdx|mkd|markdown)$/i
 const TXT_EXT = /\.txt$/i
@@ -93,6 +94,8 @@ type Panel = 'folder' | 'outline'
 
 class Reader {
   private settings!: Settings
+  private t = createTranslator()
+  private labels: { node: HTMLElement; key: MessageKey; attribute: 'title' | 'placeholder' }[] = []
   private root!: HTMLElement
   private content!: HTMLElement
   private outlineList!: HTMLElement
@@ -107,6 +110,7 @@ class Reader {
   private activePanel: Panel = 'outline'
   private folderEntries: DirEntry[] | null = null
   private folderError = false
+  private folderLoading = false
   private folderQuery = ''
   private folderSortKey: 'name' | 'size' | 'date' = 'name'
   private folderSortAsc = true
@@ -147,6 +151,7 @@ class Reader {
       return
     }
     this.settings = await loadSettings()
+    this.t = createTranslator(this.settings.language)
     onSettingsChanged(next => this.applySettingsChange(this.settings, next))
 
     if (isDirListingPage()) {
@@ -180,6 +185,40 @@ class Reader {
   /* ------------------------------------------------------------ *
    * chrome (root layout, sidebar, buttons)
    * ------------------------------------------------------------ */
+  private label<T extends HTMLElement>(node: T, key: MessageKey, attribute: 'title' | 'placeholder' = 'title'): T {
+    this.labels.push({ node, key, attribute })
+    node.setAttribute(attribute, this.t(key))
+    if (node.tagName === 'BUTTON') node.setAttribute('aria-label', this.t(key))
+    return node
+  }
+
+  private applyLanguage() {
+    this.root.lang = resolveLocale(this.settings.language)
+    this.labels.forEach(({ node, key, attribute }) => {
+      node.setAttribute(attribute, this.t(key))
+      if (node.tagName === 'BUTTON') node.setAttribute('aria-label', this.t(key))
+    })
+    this.closeSideMenu?.()
+    this.renderOutline()
+    this.updateContentLabels()
+    this.renderFolderList()
+    if (this.dirSubtitle) this.dirSubtitle.textContent = this.directoryCounts()
+  }
+
+  private updateContentLabels() {
+    const labels: [string, MessageKey][] = [
+      ['.markdang__head-anchor', 'headingLink'],
+      ['.markdang__caption-anchor', 'captionLink'],
+      ['.markdang__btn--copy', 'copyCode'],
+    ]
+    for (const [selector, key] of labels) {
+      this.content.querySelectorAll<HTMLElement>(selector).forEach(node => {
+        node.title = this.t(key)
+        node.setAttribute('aria-label', this.t(key))
+      })
+    }
+  }
+
   private buildChrome() {
     document.head.appendChild(el('style', { id: 'markdang-style' }, [READER_CSS + '\n' + katexStyles]))
     const pre = getRawContainer()
@@ -192,6 +231,7 @@ class Reader {
     } else pre?.classList.add('markdang-host')
 
     this.root = el('div', { class: 'markdang' })
+    this.root.lang = resolveLocale(this.settings.language)
     const layout = el('div', { class: 'markdang-layout' })
     this.content = el('article', { class: 'markdang-content', tabindex: '-1' })
     layout.append(this.content)
@@ -199,25 +239,25 @@ class Reader {
     const side = this.buildSidebar()
     const buttons = el('div', { class: 'markdang__button-wrap' })
 
-    const sideBtn = el('button', { class: 'markdang__btn', title: '展开/收起侧栏' }, [html('span', SVG.side)])
+    const sideBtn = this.label(el('button', { class: 'markdang__btn' }, [html('span', SVG.side)]), 'sidebarToggle')
     sideBtn.addEventListener('click', () => this.patchSettings({ sideCollapsed: !this.settings.sideCollapsed }))
-    const rawBtn = el('button', { class: 'markdang__btn', title: '原始内容' }, [html('span', SVG.code)])
+    const rawBtn = this.label(el('button', { class: 'markdang__btn' }, [html('span', SVG.code)]), 'rawSource')
     rawBtn.addEventListener('click', () => document.body.classList.toggle('markdang-raw'))
-    const themeBtn = el('button', { class: 'markdang__btn', title: '切换深浅主题' }, [html('span', SVG.sun)])
+    const themeBtn = this.label(el('button', { class: 'markdang__btn' }, [html('span', SVG.sun)]), 'themeToggle')
     themeBtn.addEventListener('click', () => {
       /* one-click inversion: dark → light, light/auto → dark (auto lives in settings) */
       this.patchSettings({ pageTheme: this.resolveDark() ? 'light' : 'dark' })
     })
-    const printBtn = el('button', { class: 'markdang__btn', title: '打印' }, [html('span', SVG.print)])
+    const printBtn = this.label(el('button', { class: 'markdang__btn' }, [html('span', SVG.print)]), 'print')
     printBtn.addEventListener('click', () => window.print())
-    const fsBtn = el('button', { class: 'markdang__btn', title: '全屏' }, [html('span', SVG.fullscreen)])
+    const fsBtn = this.label(el('button', { class: 'markdang__btn' }, [html('span', SVG.fullscreen)]), 'fullscreen')
     fsBtn.addEventListener('click', () => {
       if (document.fullscreenElement) document.exitFullscreen()
       else document.documentElement.requestFullscreen().catch(() => {})
     })
-    const goTop = el('button', { class: 'markdang__btn markdang__btn--go-top', title: '返回顶部' }, [html('span', SVG.top)])
+    const goTop = this.label(el('button', { class: 'markdang__btn markdang__btn--go-top' }, [html('span', SVG.top)]), 'backToTop')
     goTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }))
-    const exitZen = el('button', { class: 'markdang__btn markdang__btn--exit-zen', title: '退出禅模式 (Esc)' }, [html('span', SVG.zen)])
+    const exitZen = this.label(el('button', { class: 'markdang__btn markdang__btn--exit-zen' }, [html('span', SVG.zen)]), 'exitZen')
     exitZen.addEventListener('click', () => this.patchSettings({ zenMode: false, mode: 'normal' }))
     buttons.append(sideBtn, rawBtn, themeBtn, printBtn, fsBtn, exitZen, goTop)
 
@@ -244,7 +284,7 @@ class Reader {
     /* outline panel */
     this.outlineList = el('ul', { class: 'markdang__outline-list' })
     this.outlineFilterRow = el('div', { class: 'markdang__filter-row hidden' })
-    const outlineInput = el('input', { type: 'search', placeholder: '筛选标题' })
+    const outlineInput = this.label(el('input', { type: 'search' }), 'filterHeadings', 'placeholder')
     outlineInput.addEventListener('input', () => {
       this.outlineQuery = outlineInput.value.trim().toLowerCase()
       this.syncOutline()
@@ -259,7 +299,7 @@ class Reader {
     /* folder panel */
     this.folderList = el('ul', { class: 'markdang__folder-list' })
     this.folderFilterRow = el('div', { class: 'markdang__filter-row hidden' })
-    const folderInput = el('input', { type: 'search', placeholder: '搜索文件' })
+    const folderInput = this.label(el('input', { type: 'search' }), 'searchFiles', 'placeholder')
     folderInput.addEventListener('input', () => {
       this.folderQuery = folderInput.value.trim().toLowerCase()
       this.renderFolderList()
@@ -274,11 +314,11 @@ class Reader {
     /* tab bar: [folder][outline] ... [search][options] — mirrors the
        official reader layout */
     const tabs = el('div', { class: 'markdang__side-tabs' })
-    const folderTab = el('button', { class: 'markdang__side-tab', title: '目录' }, [html('span', SVG.folder)])
-    const outlineTab = el('button', { class: 'markdang__side-tab active', title: '大纲' }, [html('span', SVG.outline)])
+    const folderTab = this.label(el('button', { class: 'markdang__side-tab' }, [html('span', SVG.folder)]), 'folder')
+    const outlineTab = this.label(el('button', { class: 'markdang__side-tab active' }, [html('span', SVG.outline)]), 'outline')
     const spacer = el('span', { class: 'markdang__side-spacer' })
-    const searchBtn = el('button', { class: 'markdang__side-tab markdang__side-action', title: '搜索' }, [html('span', SVG.search)])
-    const menuBtn = el('button', { class: 'markdang__side-tab markdang__side-action', title: '选项' }, [html('span', SVG.sliders)])
+    const searchBtn = this.label(el('button', { class: 'markdang__side-tab markdang__side-action' }, [html('span', SVG.search)]), 'search')
+    const menuBtn = this.label(el('button', { class: 'markdang__side-tab markdang__side-action' }, [html('span', SVG.sliders)]), 'options')
     tabs.append(folderTab, outlineTab, spacer, searchBtn, menuBtn)
 
     /* dropdown menu (options depend on the active panel) */
@@ -296,20 +336,20 @@ class Reader {
     const openMenu = () => {
       menu.innerHTML = ''
       if (this.activePanel === 'outline') {
-        menu.append(this.menuItem('展开全部', () => {
+        menu.append(this.menuItem(this.t('expandAll'), () => {
           this.foldSet.clear()
           this.syncOutline()
         }))
-        menu.append(this.menuItem('折叠全部', () => {
+        menu.append(this.menuItem(this.t('collapseAll'), () => {
           this.headIds.forEach(id => this.foldSet.add(id))
           this.syncOutline()
         }))
       } else {
-        menu.append(this.menuTitle('排序方式'))
+        menu.append(this.menuTitle(this.t('sortBy')))
         ;([
-          ['name', '按名称'],
-          ['size', '按大小'],
-          ['date', '按修改日期'],
+          ['name', this.t('sortName')],
+          ['size', this.t('sortSize')],
+          ['date', this.t('sortDate')],
         ] as const).forEach(([value, label]) => {
           menu.append(
             this.menuCheck(label, this.folderSortKey === value, () => {
@@ -318,15 +358,15 @@ class Reader {
             }),
           )
         })
-        menu.append(this.menuCheck('升序', this.folderSortAsc, () => {
+        menu.append(this.menuCheck(this.t('ascending'), this.folderSortAsc, () => {
           this.folderSortAsc = !this.folderSortAsc
           this.renderFolderList()
         }))
-        menu.append(this.menuCheck('文件夹置顶', this.foldersTop, () => {
+        menu.append(this.menuCheck(this.t('foldersFirst'), this.foldersTop, () => {
           this.foldersTop = !this.foldersTop
           this.renderFolderList()
         }))
-        menu.append(this.menuCheck('显示隐藏文件', this.showHidden, () => {
+        menu.append(this.menuCheck(this.t('showHidden'), this.showHidden, () => {
           this.showHidden = !this.showHidden
           this.renderFolderList()
         }))
@@ -418,6 +458,7 @@ class Reader {
 
     this.decorateHeadings()
     this.renderOutline()
+    this.updateContentLabels()
     this.mermaidQueue = this.mermaidQueue.then(() => this.renderMermaid(result.mermaidBlocks, version))
     this.bindContentEvents()
     this.bootCleanup(true)
@@ -439,7 +480,7 @@ class Reader {
       const id = head.hasAttribute('data-markdang-heading') ? head.id : uniqueHeadingId(base, seen)
       head.removeAttribute('data-markdang-heading')
       if (!head.querySelector('.markdang__head-anchor')) {
-        const anchor = el('a', { class: 'markdang__head-anchor', href: `#${encodeURIComponent(id)}`, 'aria-label': 'Link to heading' }, ['#'])
+        const anchor = el('a', { class: 'markdang__head-anchor', href: `#${encodeURIComponent(id)}`, 'aria-label': this.t('headingLink') }, ['#'])
         head.prepend(anchor)
       }
       if (head.id !== id) head.id = id
@@ -465,7 +506,7 @@ class Reader {
         li.classList.add('has-children')
       }
       if (this.settings.isOutlineExpandable && hasChildren) {
-        const fold = el('span', { class: 'markdang__fold', role: 'button', tabindex: '0', 'aria-label': `折叠/展开 ${text}` }, [html('span', SVG.chevron)])
+        const fold = el('span', { class: 'markdang__fold', role: 'button', tabindex: '0', 'aria-label': this.t('foldHeading', { title: text }) }, [html('span', SVG.chevron)])
         fold.addEventListener('click', e => {
           e.preventDefault()
           e.stopPropagation()
@@ -546,7 +587,7 @@ class Reader {
           placeholder.innerHTML = sanitizeDiagram(svg)
         } catch (err) {
           if (version !== this.renderVersion || !placeholder.isConnected) return
-          placeholder.replaceChildren(el('code', {}, [code]), el('div', { class: 'markdang__mermaid-error' }, [err instanceof Error ? err.message : 'Render error']))
+          placeholder.replaceChildren(el('code', {}, [code]), el('div', { class: 'markdang__mermaid-error' }, [err instanceof Error ? err.message : this.t('renderError')]))
         }
       }
     } catch (err) {
@@ -575,7 +616,8 @@ class Reader {
           btn.classList.add('copied')
           setTimeout(() => btn.classList.remove('copied'), 1200)
         } catch {
-          btn.title = '复制失败，请手动选择代码'
+          btn.title = this.t('copyFailed')
+          btn.setAttribute('aria-label', this.t('copyFailed'))
         }
       })
     })
@@ -604,9 +646,8 @@ class Reader {
     const dirName = decodeURIComponent(location.pathname.split('/').filter(Boolean).pop() ?? '/')
     const container = el('div', { class: 'markdang__dir' })
     const title = el('h1', { class: 'markdang__dir-title' }, [html('span', SVG.folder), dirName])
-    const sub = el('p', { class: 'markdang__dir-sub' }, [
-      `${entries.filter(e => !e.isDir).length} 个文件 · ${entries.filter(e => e.isDir).length} 个文件夹`,
-    ])
+    const sub = el('p', { class: 'markdang__dir-sub' }, [this.directoryCounts()])
+    this.dirSubtitle = sub
     const list = el('ul', { class: 'markdang__dir-list' })
     this.dirListEl = list
     container.append(title, sub, list)
@@ -619,13 +660,22 @@ class Reader {
   }
 
   private dirListEl!: HTMLElement
+  private dirSubtitle?: HTMLElement
+
+  private directoryCounts(): string {
+    const entries = this.folderEntries ?? []
+    return this.t('directoryCounts', {
+      files: entries.filter(entry => !entry.isDir).length,
+      folders: entries.filter(entry => entry.isDir).length,
+    })
+  }
 
   private renderDirList() {
     const list = this.dirListEl
     list.innerHTML = ''
     const entries = this.sortedFolderEntries()
     if (!entries.length) {
-      list.append(el('li', { class: 'markdang__panel-hint' }, ['此文件夹没有 Markdown 文件']))
+      list.append(el('li', { class: 'markdang__panel-hint' }, [this.t('directoryEmpty')]))
       return
     }
     entries.forEach(entry => {
@@ -647,8 +697,8 @@ class Reader {
       this.renderFolderList()
       return
     }
-    this.folderList.innerHTML = ''
-    this.folderList.append(el('li', { class: 'markdang__panel-hint' }, ['正在加载目录…']))
+    this.folderLoading = true
+    this.renderFolderList()
     const dirUrl = getDirUrl()
     let entries: DirEntry[] | null = null
     if (location.protocol === 'file:') {
@@ -659,6 +709,7 @@ class Reader {
       if (!entries) this.folderError = true
     }
     this.folderEntries = entries ?? []
+    this.folderLoading = false
     this.renderFolderList()
   }
 
@@ -724,13 +775,17 @@ class Reader {
   private renderFolderList() {
     if (this.isDirPage && this.dirListEl) this.renderDirList()
     this.folderList.innerHTML = ''
+    if (this.folderLoading) {
+      this.folderList.append(el('li', { class: 'markdang__panel-hint' }, [this.t('directoryLoading')]))
+      return
+    }
     if (this.folderError && !this.folderEntries?.length) {
-      this.folderList.append(el('li', { class: 'markdang__panel-hint' }, ['无法获取目录列表']))
+      this.folderList.append(el('li', { class: 'markdang__panel-hint' }, [this.t('directoryError')]))
       return
     }
     const entries = this.sortedFolderEntries()
     if (!entries.length) {
-      this.folderList.append(el('li', { class: 'markdang__panel-hint' }, ['当前目录下未找到 Markdown 文件']))
+      this.folderList.append(el('li', { class: 'markdang__panel-hint' }, [this.t('folderEmpty')]))
       return
     }
     entries.forEach(entry => {
@@ -819,6 +874,7 @@ class Reader {
     const beforeDir = before.enable && before.enableFolderUrl && this.isDirPage
     const afterDir = next.enable && next.enableFolderUrl && this.isDirPage
     this.settings = next
+    this.t = createTranslator(next.language)
 
     if (beforeDoc !== afterDoc || beforeDir !== afterDir) {
       if (this.refreshTimer) clearTimeout(this.refreshTimer)
@@ -826,6 +882,8 @@ class Reader {
       return
     }
     if (!this.root) return
+
+    if (before.language !== next.language) this.applyLanguage()
 
     if (afterDoc && isMdRelevant(before, next)) {
       this.renderDoc()

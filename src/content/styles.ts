@@ -382,7 +382,7 @@ export const READER_CSS = String.raw`
   display: flex;
   flex-direction: column;
   transition: transform 0.25s ease;
-  font-size: 13.5px;
+  font-size: 15px;
 }
 .markdang-side-collapsed .markdang__side {
   transform: translateX(-100%);
@@ -421,7 +421,7 @@ export const READER_CSS = String.raw`
   border-radius: 7px;
   background: transparent;
   color: var(--text);
-  font-size: 0.88em;
+  font-size: 0.95em;
   text-align: start;
   cursor: pointer;
 }
@@ -478,7 +478,7 @@ export const READER_CSS = String.raw`
   border-radius: 8px;
   color: var(--muted);
   text-decoration: none;
-  font-size: 0.92em;
+  font-size: 1em;
   line-height: 1.4;
   margin-left: calc(10px + var(--mdg-indent, 0) * 12px);
   overflow: hidden;

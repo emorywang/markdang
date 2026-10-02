@@ -1,4 +1,6 @@
-# Contributing / 贡献指南
+# Contributing
+
+[简体中文](CONTRIBUTING.zh-CN.md) · [README](README.md)
 
 Issues and pull requests are welcome. The code is source-available under the [PolyForm Noncommercial License](LICENSE); brand assets are governed separately by [TRADEMARKS.md](TRADEMARKS.md).
 
@@ -11,9 +13,7 @@ Include the extension version, browser and version, reproducible steps, expected
 1. Create a focused `fix/...` or `feat/...` branch and follow [the development guide](docs/development.md).
 2. Run `npm run check` and `npm run test:e2e` before requesting review. State any check you could not run and why.
 3. Add regression coverage for a corrected failure or new behavior. Keep fixtures in the repository.
-4. Update the settings reference when changing a setting. Include before/after screenshots for visible UI changes.
+4. Update both language versions of relevant docs when changing behavior. Include before/after screenshots for visible UI changes, and keep interface text pairs in `src/shared/i18n.ts` complete.
 5. Use Conventional Commit messages such as `fix: refresh local documents without stale cache`.
 
 Use strict TypeScript, typed application messages, and small functions with a clear purpose. Keep necessary boundary assertions local. Comments should explain non-obvious decisions. Prefer accurate documentation and working controls over placeholders.
-
-欢迎反馈和提交 PR。报告 Bug 不需要先运行测试；请提供版本、复现步骤和脱敏示例。代码改动请运行检查、补充必要的回归测试，并同步相关文档。保持沟通友善、具体、专业。

@@ -5,7 +5,7 @@ import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { launchExtension } from './browser.mjs'
 
-const { context, extId } = await launchExtension()
+const { context, extId } = await launchExtension({ language: 'zh-CN' })
 const temp = await fs.mkdtemp(path.join(os.tmpdir(), 'markdang-regressions-'))
 let assertions = 0
 const ok = (name, result) => { assert.ok(result, name); assertions++; console.log(`PASS  ${name}`) }

@@ -11,7 +11,7 @@ const ok = (name, cond, extra = '') => {
   console.log(`${cond ? 'PASS' : 'FAIL'}  ${name}${extra ? ' | ' + extra : ''}`)
 }
 
-const { context: ctx, extId } = await launchExtension()
+const { context: ctx, extId } = await launchExtension({ language: 'zh-CN' })
 
 const store = await ctx.newPage()
 await store.goto(`chrome-extension://${extId}/src/popup/index.html`)
