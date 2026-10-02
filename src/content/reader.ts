@@ -762,8 +762,6 @@ class Reader {
     const codeTheme = theme === 'dark' ? s.codeBlockNightTheme : s.codeBlockDayTheme
     this.root.dataset.code = codeTheme
     this.root.classList.toggle('markdang-centered', s.centered)
-    document.body.classList.toggle('task-label-on', !!s.mdPluginOptions.TaskLists.label)
-    document.body.classList.toggle('task-label-after', !!s.mdPluginOptions.TaskLists.label && !!s.mdPluginOptions.TaskLists.labelAfter)
     this.root.classList.toggle('markdang-code-wrap', s.codeWrap)
     this.root.classList.toggle('markdang-side-visible', !s.sideCollapsed && s.mode !== 'zen')
     this.root.classList.toggle('markdang-side-collapsed', s.sideCollapsed)

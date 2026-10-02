@@ -213,7 +213,12 @@ const checkboxFirst = await evalInPage(() => {
   const li = document.querySelector('.markdang-content li.task-list-item')
   const input = li?.querySelector('.task-list-item-checkbox')
   const label = li?.querySelector('label')
-  return !!input && !!label && input.getBoundingClientRect().left <= label.getBoundingClientRect().left
+  if (!input || !label) return false
+  const text = [...label.childNodes].find(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim())
+  if (!text) return false
+  const range = document.createRange()
+  range.selectNodeContents(text)
+  return input.getBoundingClientRect().right <= range.getBoundingClientRect().left
 })
 ok('tasklist: option off -> checkbox before text', checkboxFirst)
 await set({

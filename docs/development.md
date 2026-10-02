@@ -35,6 +35,8 @@ Recent branded Chrome/Edge versions restrict command-line extension loading. Pre
 
 Update the schema/defaults, relevant UI, settings reference, and a representative regression test together. Send partial settings patches rather than complete snapshots. Do not add controls for unimplemented behavior or claim coverage based on a fixed assertion count. Existing storage keys are retained where practical; retired placeholders are documented explicitly.
 
+CI actions are pinned to reviewed release commits. When updating them, verify the upstream release and change both its commit SHA and version comment.
+
 ## Release checklist
 
 1. Run `npm ci`, `npm run check`, and `npm run test:e2e`.

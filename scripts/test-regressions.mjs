@@ -87,6 +87,14 @@ try {
   await page.waitForSelector('.markdang__mermaid svg', { timeout: 15000 })
   ok('custom Mermaid JSON retains safe rendering', await page.locator('.markdang__mermaid svg').count() === 1)
 
+  await patch({ mdPluginOptions: { TaskLists: { enabled: true, label: true, labelAfter: true } } })
+  await goto('- [ ] **Parent** `code`\n  - [x] Child')
+  ok('task labels preserve formatted content and nested list layout', await page.evaluate(() => {
+    const parent = document.querySelector('.task-list-item')
+    const child = parent.querySelector('.task-list-item')
+    return parent.querySelectorAll('strong').length === 1 && parent.querySelectorAll('code').length === 1 && child.getBoundingClientRect().top > parent.querySelector('label').getBoundingClientRect().top
+  }))
+
   /* Rapid UI edits used to share one debounce timer, losing the first edit. */
   await storage.getByRole('button', { name: '通用', exact: true }).click()
   await storage.getByRole('switch', { name: '渲染文件夹路径', exact: true }).click()

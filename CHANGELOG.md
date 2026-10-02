@@ -12,6 +12,7 @@
 - Generate stable TOC links for repeated, formatted, omitted, and Unicode headings; handle invalid regex without breaking rendering.
 - Update Auto theme on system changes, restore original pages when disabled, keep the zen exit button visible, and correct directory sorting.
 - Apply KaTeX error options consistently and preserve source when front matter is disabled.
+- Preserve formatted task labels and nested task lists without sharing options between renderers.
 
 ### Changed
 

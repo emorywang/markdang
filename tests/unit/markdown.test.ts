@@ -74,3 +74,33 @@ test('KaTeX error color applies to ordinary inline and display math', () => {
   const html = createRenderer(settings).render('$\\unknowncommand$\n\n$$\\unknowncommand$$').html
   assert.ok(html.includes('#123456'))
 })
+
+test('labels before task checkboxes retain parsed emphasis, code, and links once', () => {
+  const settings = defaultSettings()
+  settings.mdPluginOptions.TaskLists = { enabled: true, label: true, labelAfter: true }
+  const html = createRenderer(settings).render('- [x] **Bold** `code` [link](https://example.com)').html
+  assert.equal([...html.matchAll(/<strong>Bold<\/strong>/g)].length, 1)
+  assert.equal([...html.matchAll(/<code>code<\/code>/g)].length, 1)
+  assert.equal([...html.matchAll(/>link<\/a>/g)].length, 1)
+  assert.ok(!html.includes('**Bold**'))
+  const id = html.match(/<label[^>]*for="([^"]+)"/)?.[1]
+  assert.ok(id && html.includes(`id="${id}"`))
+  assert.ok(html.indexOf('</label>') < html.indexOf('<input'))
+})
+
+test('task options do not leak between independently constructed renderers', () => {
+  const disabled = createRenderer(defaultSettings())
+  const settings = defaultSettings()
+  settings.mdPluginOptions.TaskLists = { enabled: true, label: true, labelAfter: true }
+  const enabled = createRenderer(settings)
+  assert.ok(disabled.render('- [ ] Task').html.includes(' disabled'))
+  assert.ok(!enabled.render('- [ ] Task').html.includes(' disabled'))
+})
+
+test('nested task lists retain their structure and mark the correct parent lists', () => {
+  const html = render('- [ ] Parent\n  - [x] Child')
+  assert.equal([...html.matchAll(/contains-task-list/g)].length, 2)
+  assert.equal([...html.matchAll(/class="task-list-item"/g)].length, 2)
+  assert.ok(html.includes('Child'))
+  assert.ok(html.indexOf('<ul', html.indexOf('Parent')) < html.indexOf('Child'))
+})

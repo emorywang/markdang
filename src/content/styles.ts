@@ -147,25 +147,9 @@ export const READER_CSS = String.raw`
 .markdang-content .table-of-contents a:hover { color: var(--primary); }
 .markdang-content ul, .markdang-content ol { padding-inline-start: 1.6em; }
 .markdang-content li { margin: 0.3em 0; }
-.markdang-content ul.contains-task-list { padding-inline-start: 1.2em; }
+.markdang-content .contains-task-list { padding-inline-start: 1.2em; }
 .markdang-content li.task-list-item { list-style: none; }
-.markdang-content li.task-list-item {
-  display: flex;
-  align-items: baseline;
-}
-/* TaskLists label semantics:
-   - default (labelAfter=false): checkbox first, text after — in wrap mode
-     the <label> contains checkbox+text, so keep DOM order
-   - 「将文字显示在复选框之前」 on: text first, checkbox last in both modes */
-body.task-label-after .markdang-content li.task-list-item .task-list-item-checkbox { order: 2; }
-body.task-label-after .markdang-content li.task-list-item .task-list-item-label { order: 1; }
-body.task-label-on:not(.task-label-after) .markdang-content li.task-list-item label {
-  display: inline-flex;
-  align-items: baseline;
-}
-body.task-label-on:not(.task-label-after) .markdang-content li.task-list-item label .task-list-item-checkbox { order: -1; }
 .markdang-content li.task-list-item .task-list-item-checkbox {
-  flex: none;
   margin-inline-end: 0.45em;
   accent-color: var(--primary);
   vertical-align: -1px;

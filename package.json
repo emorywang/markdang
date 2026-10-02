@@ -32,7 +32,6 @@
     "markdown-it-multimd-table": "^4.2.3",
     "markdown-it-sub": "^2.0.0",
     "markdown-it-sup": "^2.0.0",
-    "markdown-it-task-lists": "^2.1.1",
     "mermaid": "^11.4.1",
     "pako": "^2.2.0",
     "preact": "^10.24.0"

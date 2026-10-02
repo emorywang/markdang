@@ -8,7 +8,6 @@ import markPlugin from 'markdown-it-mark'
 import abbrPlugin from 'markdown-it-abbr'
 import deflistPlugin from 'markdown-it-deflist'
 import footnotePlugin from 'markdown-it-footnote'
-import tasklistsPlugin from 'markdown-it-task-lists'
 import multimdTablePlugin from 'markdown-it-multimd-table'
 import containerPlugin from 'markdown-it-container'
 import katexPlugin from '@traptitech/markdown-it-katex'
@@ -19,6 +18,42 @@ import { alert as mditAlert } from '@mdit/plugin-alert'
 import type { Settings, MdPluginOptions } from '../shared/settings'
 
 interface RenderEnv { frontMatter?: string }
+
+/* Keep parsed inline tokens intact when a label precedes its checkbox.
+   Options belong to this renderer; separate instances never share state. */
+function tasklistsPlugin(md: MarkdownIt, opts: MdPluginOptions['TaskLists']) {
+  md.core.ruler.after('inline', 'markdang_task_lists', state => {
+    const lists: Token[] = []
+    const prefix = `mdg-task-${crypto.getRandomValues(new Uint32Array(1))[0].toString(36)}`
+    const html = (content: string) => {
+      const token = new state.Token('html_inline', '', 0)
+      token.content = content
+      return token
+    }
+    state.tokens.forEach((token, index) => {
+      if (token.type === 'bullet_list_open' || token.type === 'ordered_list_open') lists.push(token)
+      if (token.type === 'bullet_list_close' || token.type === 'ordered_list_close') lists.pop()
+      const item = state.tokens[index - 2]
+      if (token.type !== 'inline' || state.tokens[index - 1]?.type !== 'paragraph_open' || item?.type !== 'list_item_open') return
+      const match = token.content.match(/^\[([ xX])\] /)
+      if (!match || token.children?.[0]?.type !== 'text') return
+      token.content = token.content.slice(3)
+      token.children[0].content = token.children[0].content.slice(3)
+      const id = `${prefix}-${index}`
+      const input = `<input class="task-list-item-checkbox" type="checkbox"${match[1] !== ' ' ? ' checked' : ''}${opts.enabled ? '' : ' disabled'}${opts.label && opts.labelAfter ? ` id="${id}"` : ''}>`
+      if (opts.label && opts.labelAfter) {
+        token.children.unshift(html(`<label class="task-list-item-label" for="${id}">`))
+        token.children.push(html(`</label> ${input}`))
+      } else {
+        token.children.unshift(html(`${opts.label ? '<label>' : ''}${input}`))
+        if (opts.label) token.children.push(html('</label>'))
+      }
+      item.attrJoin('class', `task-list-item${opts.enabled ? ' enabled' : ''}`)
+      const list = lists.at(-1)
+      if (list && !list.attrGet('class')?.split(' ').includes('contains-task-list')) list.attrJoin('class', 'contains-task-list')
+    })
+  })
+}
 
 /* ---------------------------------------------------------------- *
  * bare math: \begin{env} ... \end{env} blocks without $$ wrappers

@@ -259,7 +259,7 @@ export function App({ variant = 'page' }: { variant?: 'page' | 'popup' } = {}) {
             </Group>
 
             <Group title="布局">
-              <ToggleField title="禅模式" desc="隐藏侧栏和所有控制界面，进入沉浸式阅读；Esc 退出" checked={s.zenMode} onChange={v => patch({ zenMode: v })} />
+              <ToggleField title="禅模式" desc="隐藏侧栏和常规控件；点击退出按钮或按 Esc 退出" checked={s.zenMode || s.mode === 'zen'} onChange={v => patch({ zenMode: v, mode: 'normal' })} />
               <ToggleField title="内容居中" desc="利于阅读的居中布局" checked={s.centered} onChange={v => patch({ centered: v })} />
               <ToggleField title="自定义内容最大宽度" checked={s.enableCustomContentWidth} onChange={v => patch({ enableCustomContentWidth: v })} />
               {s.enableCustomContentWidth && (
@@ -305,7 +305,7 @@ export function App({ variant = 'page' }: { variant?: 'page' | 'popup' } = {}) {
                   <textarea
                     rows={7}
                     spellcheck={false}
-                    placeholder={'将自定义CSS粘贴到这里，例如:\narticle {\n  --text-base: #373737;\n}'}
+                    placeholder={'将自定义 CSS 粘贴到这里，例如：\n.markdang-content {\n  color: #373737;\n}'}
                     value={cssDraft}
                     onInput={e => setCssDraft((e.target as HTMLTextAreaElement).value)}
                   />
@@ -413,9 +413,9 @@ type Patcher<T> = (p: Partial<T>) => void
 function LinkifyOptions({ options, patch }: { options: MdPluginOptions['Linkify']; patch: Patcher<MdPluginOptions['Linkify']> }) {
   return (
     <>
-      <ToggleField title="模糊链接" desc="自动将类 http:// 或 https:// 的域名文本识别为链接" checked={options.fuzzyLink} onChange={v => patch({ fuzzyLink: v })} />
+      <ToggleField title="模糊链接" desc="自动识别不含协议的域名，例如 example.com" checked={options.fuzzyLink} onChange={v => patch({ fuzzyLink: v })} />
       <ToggleField title="模糊 IP 地址" desc="自动将 IP 地址识别为链接" checked={options.fuzzyIP} onChange={v => patch({ fuzzyIP: v })} />
-      <ToggleField title="模糊邮箱地址" desc="自动将 foo@bar 邮箱地址识别为链接" checked={options.fuzzyEmail} onChange={v => patch({ fuzzyEmail: v })} />
+      <ToggleField title="模糊邮箱地址" desc="自动识别邮箱地址，例如 user@example.com" checked={options.fuzzyEmail} onChange={v => patch({ fuzzyEmail: v })} />
     </>
   )
 }
