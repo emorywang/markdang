@@ -103,7 +103,7 @@ function escapeHtml(text: string): string {
 /* ---------------------------------------------------------------- *
  * PlantUML: deflate + the PlantUML text encoding, rendered through a
  * PlantUML server (opt-in plugin — enabling it sends the diagram
- * source to the configured server).
+ * source to the official server).
  * ---------------------------------------------------------------- */
 const PLANTUML_ALPHABET = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_'
 
@@ -150,6 +150,7 @@ function headingIdsPlugin(md: MarkdownIt) {
     state.tokens.forEach((token, index) => {
       if (token.type === 'heading_open') {
         token.attrSet('id', uniqueHeadingId(slugify(state.tokens[index + 1]?.content ?? ''), used))
+        token.attrSet('data-markdang-heading', '')
       }
     })
   })

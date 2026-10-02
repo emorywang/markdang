@@ -57,6 +57,12 @@ try {
   await goto('[[TOC]]\n\n# Same\n\n## Same\n\n## **中文** `code`\n\n### Child')
   const links = await page.evaluate(() => [...document.querySelectorAll('.table-of-contents a')].every(a => document.getElementById(decodeURIComponent(a.hash.slice(1)))))
   ok('TOC fragments resolve to actual headings', links)
+  await goto('<h1 id="same">Raw HTML</h1>\n\n[[TOC]]\n\n# Same')
+  ok('raw HTML headings cannot take a Markdown TOC destination', await page.evaluate(() => {
+    const link = document.querySelector('.table-of-contents a')
+    const heads = [...document.querySelectorAll('.markdang-content h1')]
+    return new Set(heads.map(head => head.id)).size === heads.length && document.getElementById(decodeURIComponent(link.hash.slice(1)))?.textContent === '#Same'
+  }))
   await patch({ mdPluginOptions: { TOC: { markerPattern: '/[/' } } })
   await page.waitForSelector('.table-of-contents')
   ok('invalid marker regex does not break the reader', await page.locator('.markdang-content h1').count() === 1)

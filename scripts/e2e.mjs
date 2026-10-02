@@ -177,10 +177,10 @@ await goto(furl('tests/fixtures/notes.txt'))
 await waitForReader()
 ok('txt: rendered by default', !!(await page.$('.markdang-content')))
 await setStorage({ enableTxtExt: false })
-await goto(furl('tests/fixtures/notes.txt'))
-await page.waitForLoadState('domcontentloaded').catch(() => {})
+await page.waitForFunction(() => !document.querySelector('.markdang') && !document.getElementById('markdang-boot-style'))
 ok('txt: not rendered when disabled', !(await page.$('.markdang-content')))
 await setStorage({ enableTxtExt: true })
+await page.waitForSelector('.markdang-content')
 
 /* ---- 8. directory view ---- */
 await goto(furl('tests/fixtures/'))
@@ -234,10 +234,12 @@ await setStorage({
 
 /* ---- 11. disabled ---- */
 await setStorage({ enable: false })
+await page.waitForFunction(() => !document.querySelector('.markdang') && !document.getElementById('markdang-boot-style'))
 await goto(furl('tests/fixtures/a.md'))
 await page.waitForLoadState('domcontentloaded').catch(() => {})
 ok('disabled: no reader', !(await page.$('.markdang-content')))
 await setStorage({ enable: true })
+await page.waitForSelector('.markdang-content')
 
 await page.close()
 await storagePage.close()

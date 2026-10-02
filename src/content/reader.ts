@@ -422,10 +422,16 @@ class Reader {
   private decorateHeadings() {
     const seen = new Set<string>()
     const heads = this.content.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6')
+    /* Keep the renderer's TOC destinations stable when raw HTML headings
+       reuse the same ID, even when the raw heading appears first. */
+    heads.forEach(head => {
+      if (head.hasAttribute('data-markdang-heading')) seen.add(head.id)
+    })
     this.headIds = []
     heads.forEach(head => {
       const base = head.id || slugify(head.textContent ?? '')
-      const id = uniqueHeadingId(base, seen)
+      const id = head.hasAttribute('data-markdang-heading') ? head.id : uniqueHeadingId(base, seen)
+      head.removeAttribute('data-markdang-heading')
       if (!head.querySelector('.markdang__head-anchor')) {
         const anchor = el('a', { class: 'markdang__head-anchor', href: `#${encodeURIComponent(id)}`, 'aria-label': 'Link to heading' }, ['#'])
         head.prepend(anchor)
