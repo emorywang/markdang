@@ -67,9 +67,11 @@ try {
     const heads = [...document.querySelectorAll('.markdang-content h1')]
     return new Set(heads.map(head => head.id)).size === heads.length && document.getElementById(decodeURIComponent(link.hash.slice(1)))?.textContent === '#Same'
   }))
+  const oldToc = await page.locator('.table-of-contents').elementHandle()
   await patch({ mdPluginOptions: { TOC: { markerPattern: '/[/' } } })
+  await page.waitForFunction(node => !node.isConnected, oldToc)
   await page.waitForSelector('.table-of-contents')
-  ok('invalid marker regex does not break the reader', await page.locator('.markdang-content h1').count() === 1)
+  ok('invalid marker regex does not break the reader', await page.locator('.markdang-content h1').count() === 2)
 
   await patch({ pageTheme: 'auto' })
   await page.emulateMedia({ colorScheme: 'dark' })
@@ -87,7 +89,9 @@ try {
 
   await goto('# Diagram\n\n```mermaid\nflowchart LR\nA[Start] --> B[End]\n```')
   await page.waitForSelector('.markdang__mermaid svg', { timeout: 15000 })
+  const oldDiagram = await page.locator('.markdang__mermaid svg').elementHandle()
   await patch({ mdPluginOptions: { Mermaid: { json: '{"securityLevel":"loose","secure":[],"startOnLoad":true}' } } })
+  await page.waitForFunction(node => !node.isConnected, oldDiagram)
   await page.waitForSelector('.markdang__mermaid svg', { timeout: 15000 })
   ok('custom Mermaid JSON retains safe rendering', await page.locator('.markdang__mermaid svg').count() === 1)
 
