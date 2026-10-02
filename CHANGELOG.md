@@ -19,6 +19,7 @@
 - Keep PlantUML separate from the bulk local-plugin switch; show its network disclosure and actual local-file permission status.
 - Remove nonfunctional language/character-set controls and duplicate popup CSS.
 - Use a supported Vite 7 build, clean output, real build watching, version checks, and release license notices.
+- Package formula fonts as local WOFF2 resources loaded on demand, reducing the reader script and release size.
 - Make browser tests portable and self-contained; add unit and regression suites to CI.
 - Correct repository links, setup/ZIP instructions, privacy claims, settings behavior, and contributor guidance.
 

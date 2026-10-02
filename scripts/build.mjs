@@ -31,6 +31,12 @@ function build() {
   for (const name of ['LICENSE', 'NOTICE', 'TRADEMARKS.md', 'PRIVACY.md']) {
     fs.copyFileSync(path.join(root, name), path.join(root, 'extension', name))
   }
+  const formulaFonts = path.join(root, 'extension/fonts/katex')
+  fs.mkdirSync(formulaFonts, { recursive: true })
+  const fontSource = path.join(root, 'node_modules/katex/dist/fonts')
+  for (const name of fs.readdirSync(fontSource).filter(name => name.endsWith('.woff2'))) {
+    fs.copyFileSync(path.join(fontSource, name), path.join(formulaFonts, name))
+  }
   generateNotices(root)
   console.log('Build complete: extension/')
 }

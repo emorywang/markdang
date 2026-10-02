@@ -1,4 +1,4 @@
-import katexCss from 'katex/dist/katex.min.css?inline'
+import katexCss from 'katex/dist/katex.min.css?raw'
 import { loadSettings, saveSettings, onSettingsChanged, type Settings, TEXT_SIZE_PX, FONT_STACKS, isMdRelevant, isRecord } from '../shared/settings'
 import { sendMessage, type DirEntry } from '../shared/ipc'
 import { createRenderer, slugify, uniqueHeadingId, mermaidThemeFor } from './markdown'
@@ -8,6 +8,12 @@ import { SVG } from './icons'
 
 const MD_EXT = /\.(md|mdx|mkd|markdown)$/i
 const TXT_EXT = /\.txt$/i
+
+/* Chromium supports WOFF2. Load bundled fonts when needed instead of
+   inlining three copies of every font into each document's script. */
+const katexStyles = katexCss.replace(/src:url\(fonts\/([^)]+\.woff2)\)[^}]*}/g, (_source, font: string) =>
+  `src:url("${chrome.runtime.getURL(`fonts/katex/${font}`)}") format("woff2")}`,
+)
 
 function getDirUrl(): string {
   return new URL('./', location.href).href
@@ -175,7 +181,7 @@ class Reader {
    * chrome (root layout, sidebar, buttons)
    * ------------------------------------------------------------ */
   private buildChrome() {
-    document.head.appendChild(el('style', { id: 'markdang-style' }, [READER_CSS + '\n' + katexCss]))
+    document.head.appendChild(el('style', { id: 'markdang-style' }, [READER_CSS + '\n' + katexStyles]))
     const pre = getRawContainer()
     this.rawContainer = pre
     this.rawText = pre?.textContent ?? document.body.innerText

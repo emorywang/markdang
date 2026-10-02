@@ -30,6 +30,10 @@ try {
   await patch({ textSize: 'Medium', codeWrap: false, mdPluginOptions: { Katex: { enableBareBlocks: false }, TOC: { listType: 'ul' } } })
 
   await goto('# Before\n\nOriginal text')
+  ok('bundled formula fonts load from the extension', await page.evaluate(async () => {
+    await document.fonts.load('16px KaTeX_Main')
+    return document.fonts.check('16px KaTeX_Main')
+  }))
   await patch({ refresh: true, refreshInterval: 0.5 })
   await fs.writeFile(file, '# After\n\nFirst edit')
   await page.waitForFunction(() => document.querySelector('.markdang-content h1')?.textContent?.includes('After'), null, { timeout: 15000 })

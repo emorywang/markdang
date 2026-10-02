@@ -53,7 +53,7 @@ declare module 'markdown-it-footnote' {
   const plugin: MarkdownIt.PluginSimple
   export default plugin
 }
-declare module 'katex/dist/katex.min.css?inline' {
+declare module 'katex/dist/katex.min.css?raw' {
   const css: string
   export default css
 }

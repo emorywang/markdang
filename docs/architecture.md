@@ -43,4 +43,4 @@ Auto refresh has one timer and one in-flight poll per reader. Fetches have timeo
 
 Five sequential Vite passes produce ES modules for options/popup and single-file IIFEs for the content script, classic service worker, boot script, and Mermaid. A module service worker could use static imports; this project chooses a classic bundle for simplicity. Content-script dynamic imports of packaged, web-accessible modules remain supported.
 
-The build removes old output, verifies package/manifest versions, escapes raw U+FFFE/U+FFFF characters, and includes project and third-party license notices. KaTeX styles and fonts are inlined; other fonts and the Mermaid module are web-accessible packaged resources. No executable code is downloaded from a CDN.
+The build removes old output, verifies package/manifest versions, escapes raw U+FFFE/U+FFFF characters, and includes project and third-party license notices. KaTeX styles are bundled with the reader; formula fonts use packaged WOFF2 files loaded on demand. All fonts and the Mermaid module are web-accessible packaged resources. No executable code is downloaded from a CDN.
