@@ -49,7 +49,7 @@ try {
 
   await goto('# Security\n\n<img src="missing" onerror="window.markdangAttack=true">\n\n<form action="https://example.com"><input name="secret"></form>\n\n<a href="javascript:alert(1)">bad link</a>\n\n<style>body{display:none}</style>\n\n```foo"onclick="alert(1)\ncode\n```')
   const safe = await page.evaluate(() => ({ attack: !!window.markdangAttack, handlers: document.querySelectorAll('.markdang-content [onerror],.markdang-content [onclick]').length, forms: document.querySelectorAll('.markdang-content form,.markdang-content input:not([type=checkbox]),.markdang-content style').length, badLinks: document.querySelectorAll('.markdang-content a[href^="javascript:"]').length }))
-  ok('untrusted HTML and fence attributes cannot introduce active content', !safe.attack && !safe.handlers && !safe.forms && !safe.badLinks)
+  ok(`untrusted HTML and fence attributes cannot introduce active content: ${JSON.stringify(safe)}`, !safe.attack && !safe.handlers && !safe.forms && !safe.badLinks)
   await patch({ mdPluginOptions: { FrontMatter: { showMetadata: true } } })
   await goto('---\ntitle: <img src=x onerror=alert(1)>\n---\n# Metadata')
   ok('metadata HTML is displayed literally', (await page.locator('.markdang__front-matter').textContent()).includes('<img') && await page.locator('.markdang__front-matter img').count() === 0)
