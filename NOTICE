@@ -1,7 +1,9 @@
+Required Notice: MarkDang / 码刻档 (https://github.com/emorywang/markdang)
+
 MarkDang / 码刻档
 Copyright (c) 2026 MarkDang
 
-项目主页 / Project home: https://github.com/YOUR_USER/markdang
+项目主页 / Project home: https://github.com/emorywang/markdang
 
 本软件为独立开发项目。代码许可证见 LICENSE（PolyForm Noncommercial
 License 1.0.0）；MarkDang / 码刻档 的名称、Logo、图标与品牌视觉不随
@@ -14,16 +16,10 @@ licensed under the code license — see TRADEMARKS.md.
 
 ---
 
-第三方组件 / Third-party components
+Third-party components retain their own licenses and copyrights. The release
+package includes the complete texts in THIRD_PARTY_NOTICES.txt and the bundled
+font licenses in fonts/. The project license does not replace those licenses.
 
-本产品依赖以下组件，它们保留各自的许可证与版权：
-
-- markdown-it (MIT) — https://github.com/markdown-it/markdown-it
-- KaTeX (MIT) — https://github.com/KaTeX/KaTeX
-- Mermaid (MIT) — https://github.com/mermaid-js/mermaid
-- highlight.js (BSD-3-Clause) — https://github.com/highlightjs/highlight.js
-- Preact (MIT) — https://github.com/preactjs/preact
-- Vite (MIT) — https://github.com/vitejs/vite
-- markdown-it 各插件（各自 MIT 许可）
-- Manrope 字体（SIL Open Font License 1.1，见 public/fonts/Manrope-OFL.txt）
-- Source Code Pro 字体（SIL Open Font License 1.1，见 public/fonts/SourceCodePro-OFL.md）
+第三方组件保留各自的许可证与版权。发布包附带完整第三方许可证文本
+THIRD_PARTY_NOTICES.txt，以及 fonts/ 中的字体许可证；本项目许可证
+不替代这些第三方许可证。

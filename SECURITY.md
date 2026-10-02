@@ -1,22 +1,15 @@
-# 安全策略 / Security Policy
+# Security policy
 
-## 支持版本 / Supported versions
+Security fixes target the latest release and current `main` branch.
 
-| 版本 Version | 支持 Support |
-| --- | --- |
-| 1.0.x | 是 |
+Do not post sensitive documents, credentials, or exploit details in a public issue. Use [GitHub private vulnerability reporting](https://github.com/emorywang/markdang/security/advisories/new). If GitHub indicates that private reporting is unavailable, open a public issue asking for a private contact channel **without disclosing the vulnerability**. No response-time guarantee is made.
 
-## 报告漏洞 / Reporting a vulnerability
+## Security boundaries
 
-**请勿使用公开 Issue 报告安全漏洞。**
-请使用 GitHub 的「Private vulnerability reporting」私下报告，通常 72 小时内回应。
+- Document HTML is sanitized with DOMPurify before insertion into the page. Metadata and generated attributes are escaped. Active embeds and forms are removed.
+- Mermaid uses `securityLevel: 'strict'`, fixed security options, and sanitized SVG. Document directives and custom JSON cannot enable JavaScript callbacks.
+- Local probes validate their requesting and reporting tabs. A document may request only itself or its immediate parent directory, not arbitrary local files.
+- The extension ships its executable dependencies in the package and does not load remote JavaScript. The extension's default CSP is an additional protection; it does not replace sanitizing document content in the page DOM.
+- Remote images, explicit PlantUML rendering, and custom CSS resources can generate network requests. See [PRIVACY.md](PRIVACY.md).
 
-Do **not** open public issues for security vulnerabilities — use GitHub's
-Private vulnerability reporting instead.
-
-## 攻击面说明 / Attack surface notes
-
-- 扩展不运行远程代码；manifest CSP 为默认严格策略
-- Mermaid `securityLevel: loose` 仅影响 `mermaid` 代码块内的图定义渲染
-  （与官方 Mermaid 在网页中嵌入的行为一致）
-- PlantUML 插件（默认关闭）会把图表源码发送到你配置的服务器
+安全漏洞请勿通过公开 Issue 披露。优先使用上述 GitHub 私密报告入口；如未启用，请仅请求私密联系渠道，不附漏洞细节或敏感文档。

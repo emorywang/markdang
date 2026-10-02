@@ -325,3 +325,6 @@ h1 { font-size: 21px; margin: 0 0 16px; letter-spacing: -0.01em; }
 .popup-mode .group { margin-bottom: 14px; }
 .popup-mode .group-card > * + * { border-top-color: var(--border); }
 .popup-mode .field { padding: 11px 13px; }
+
+button.gear { border: 0; padding: 0; background: transparent; font: inherit; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }

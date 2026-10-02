@@ -5,8 +5,15 @@ body:
   - type: markdown
     attributes:
       value: |
-        感谢反馈！请先确认使用的是最新构建，且三套测试在本地通过。
+        感谢反馈！请提供扩展版本、浏览器版本与最小复现步骤；无需先运行项目测试。
         Thanks! Please make sure you are on the latest build.
+  - type: input
+    id: version
+    attributes:
+      label: 扩展版本 / Extension version
+      placeholder: 1.0.0
+    validations:
+      required: true
   - type: textarea
     id: steps
     attributes:
@@ -33,7 +40,7 @@ body:
     id: browser
     attributes:
       label: 浏览器与版本 / Browser & version
-      placeholder: Edge 130.0.x / Chrome 131.0.x
+      placeholder: Chrome / Edge version
     validations:
       required: true
   - type: textarea

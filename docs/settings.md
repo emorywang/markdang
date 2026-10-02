@@ -1,70 +1,61 @@
-# 设置参考 / Settings Reference
+# Settings reference / 设置参考
 
-完整设置项、默认值与效果说明。
-All settings with defaults and their effects.
-Live examples: [demo/full-feature-test.md](../demo/full-feature-test.md).
+Settings are saved locally in the current browser profile and apply to open reader tabs. The interface currently uses Simplified Chinese. The demo illustrates Markdown syntax and common reading options; automated suites cover additional lifecycle and persistence behavior.
 
-## 通用 / General
+## Reading and appearance / 阅读与外观
 
-| 选项 Option | 默认 Default | 说明 Description |
+| Storage key | Default | Behavior / 说明 |
 | --- | --- | --- |
-| 启用 `enable` | `true` | 开启 MarkDang。关闭后所有页面恢复原始状态 / master switch |
-| 本地文件访问 — | — | 只读状态项，跳转扩展详情开启「允许访问文件网址」/ guide to the browser permission |
-| 换行风格 `mdPlugins: Breaks` | `true` | 开启时软换行渲染为 `<br>`；关闭时遵循 CommonMark 合并为一行 |
-| 开启大纲折叠 `isOutlineExpandable` | `true` | 大纲标题显示 ▸ 折叠箭头，可折叠章节 |
-| 渲染文件夹路径 `enableFolderUrl` | `true` | 打开本地文件夹时渲染为文件浏览页 |
-| 将 .txt 文件视为 Markdown 渲染 `enableTxtExt` | `true` | 关闭后 `.txt` 显示原始文本 |
-| 自动刷新文档 `refresh` | `false` | 轮询文档源并热更新（http 页面直接抓取；本地文件经后台探测） |
-| 自动刷新间隔 `refreshInterval` | `0.5` 秒 | 范围 0.5–600 秒 |
-| 字符集兼容模式 `charsetCompat` | `false` | 预留：大型本地文件的字符集处理 |
-| 语言 `language` | 跟随浏览器 | 设置存储语言（阅读器提示文案） |
-| 恢复默认设置 — | — | 一键重置全部设置为默认值 |
+| `enable` | `true` | Master switch; changes reload the current eligible page / 总开关 |
+| `enableFolderUrl` | `true` | Render local directory listings / 本地目录阅读视图 |
+| `enableTxtExt` | `true` | Read `.txt` as Markdown / 将 txt 视为 Markdown |
+| `refresh` | `false` | Poll the current document; local files use temporary inactive tabs / 自动刷新 |
+| `refreshInterval` | `0.5` | Seconds, clamped to 0.5–600 / 秒 |
+| `pageTheme` | `auto` | `light`, `dark`, or system-following `auto` / 页面主题 |
+| `codeBlockDayTheme` | `light` | Code palette on a light page: `light` or `dark` |
+| `codeBlockNightTheme` | `dark` | Code palette on a dark page: `light` or `dark` |
+| `textSize` | `Medium` | Tiny 12, Small 14, Normal 16, Medium 18, Large 20, Extra Large 24 px |
+| `textFont` | `Default` | `Default`, `System`, `Serif`, `Monospace` |
+| `centered` | `true` | Center the content within the reading area / 内容居中 |
+| `enableCustomContentWidth` | `false` | Use the custom maximum width; otherwise 1000 px |
+| `customContentData` | `{unit: 'px', maxWidth: 1000, maxPercent: 50}` | `px`: 500–3000; `%`: 10–100 of the reading area |
+| `codeWrap` | `false` | Wrap long code lines / 代码换行 |
+| `zenMode` | `false` | Hide the sidebar and controls except the exit button; Esc exits |
+| `enableCustomCSS` | `false` | Apply the saved custom stylesheet |
+| `customCSS` | `''` | Saved on **Apply CSS**; **Cancel** restores the saved draft. External CSS resources may generate requests |
+| `isOutlineExpandable` | `true` | Show fold controls; disabling reveals folded headings |
+| `sideCollapsed` | `false` | Remember sidebar visibility / 记忆侧栏状态 |
 
-## 外观 / Appearance
+Local file access is a browser permission, not a storage setting. The settings page shows whether it is granted and links to the extension's details page. The browser must grant **Allow access to file URLs** before the extension can read local documents or directories.
 
-| 选项 Option | 默认 Default | 说明 Description |
-| --- | --- | --- |
-| 字体大小 `textSize` | `Medium` (18px) | 六档：Tiny 12 / Small 14 / Normal 16 / Medium 18 / Large 20 / Extra Large 24 |
-| 字体 `textFont` | `Default` | Default / System / Serif / Monospace 字体栈 |
-| 主题 `pageTheme` | `auto` | 浅色 / 深色 / 跟随系统 |
-| 浅色模式代码块主题 `codeBlockDayTheme` | `light` | 浅色页面时高亮配色：light（浅底深字）或 dark（深底浅字） |
-| 深色模式代码块主题 `codeBlockNightTheme` | `dark` | 深色页面时同上。背景+文字+语法配色整体切换，对未高亮代码同样生效 |
-| 代码自动换行 `codeWrap` | `false` | 开启后代码行折行；关闭时横向滚动 |
-| 禅模式 `zenMode` | `false` | 隐藏侧栏与全部按钮；`Esc` 或右上角按钮退出 |
-| 内容居中 `centered` | `true` | 居中阅读布局 |
-| 自定义内容最大宽度 `enableCustomContentWidth` + `customContentData` | 关闭 · `1000px` | 单位 px（500–3000）或 %（10–100） |
-| 自定义 CSS `enableCustomCSS` + `customCSS` | 关闭 | 「应用 CSS」后注入页面，可覆盖主题样式 |
+## Plugins / 插件
 
-## 插件 / Plugins
+`mdPlugins` is the list of enabled plugin names. All below are enabled by default **except PlantUML**. The bulk toggle affects only local rendering plugins and preserves the separate PlantUML choice.
 
-总开关「所有插件」一键全开/全关。带 ⚙ 的插件有细分选项 / plugins with ⚙ have fine-grained options:
-
-| 插件 Plugin | 默认 Default | 细分选项 Options |
-| --- | --- | --- |
-| 换行风格 `Breaks` | 开 | — |
-| 自动识别链接 `Linkify` | 开 | ⚙ 模糊链接 `fuzzyLink`(关) · 模糊 IP `fuzzyIP`(关) · 模糊邮箱 `fuzzyEmail`(开)。注意：邮箱与中文字符间需留空格（linkify-it 上游行为） |
-| 排版字符替换 `Typographer` | 开 | — |
-| 表情 `Emoji` | 开 | — |
-| 上标 `Sup` / 下标 `Sub` | 开 | — |
-| 目录 `TOC` | 开 | ⚙ 标题层级 `includeLevel`([1,2]) · 容器 CSS 类 `containerClass`(table-of-contents) · 匹配正则 `markerPattern`(`/^\[\[toc\]\]/im`) · 忽略标签 `omitTag` · 列表类型 `listType`(ul/ol) |
-| 插入 `Ins` / 标记 `Mark` | 开 | — |
-| 数学公式 `Katex` | 开 | ⚙ 启用裸数学公式 `\begin{..}` 块 · 启用围栏数学公式 ```` ```math ```` · 渲染 HTML 中的行内/块公式 · 显示错误 · 错误颜色 |
-| Mermaid 图表 `Mermaid` | 开 | ⚙ 主题（auto/default/dark/neutral/forest，auto 跟随页面深浅） · `mermaid.initialize` JSON 配置 |
-| PlantUML 图表 `PlantUML` | **关** | 需网络：将图表源码发送到 PlantUML 官方服务器渲染为 SVG |
-| 缩写 `Abbr` / 释义 `Deflist` / 脚注 `Footnote` | 开 | — |
-| 元数据 `FrontMatter` | 开 | ⚙ 显示元数据（将 `--- title: .. ---` 渲染为表格） |
-| 表格扩展语法 `MultimdTable` | 开 | ⚙ 跨行合并（`^^` 与上行合并）· 跨行单元格换行（行尾 `\`）· 无表头模式 · 多级表体（空行分隔）· 自动生成标题标签（`[标签]` 行 → caption id） |
-| 复选框 `TaskLists` | 开 | ⚙ 允许勾选（复选框可点击）· 将任务项渲染在标签内（文字包 `<label>`）· 将文字显示在复选框之前 |
-| 警告框 `Alert` | 开 | ⚙ Alert 类型（note/important/tip/warning/caution/info/danger，GitHub `[!X]` 引用语法）· 嵌套 Alert · 五种命名容器 `::: info/tip/success/warning/danger` |
-
-## 阅读器行为 / Reader behavior
-
-| 设置 Setting | 说明 Description |
+| Plugin | Options under `mdPluginOptions` |
 | --- | --- |
-| 侧边栏折叠 `sideCollapsed` | 记忆侧栏状态；原始内容视图下侧栏自动隐藏 |
-| 大纲筛选 / 文件搜索 | 搜索图标切换输入框，客户端即时过滤 |
-| 目录排序 | 名称 / 大小 / 修改日期，升降序，文件夹置顶，显示隐藏文件（本地目录） |
-| 自动刷新间隔 | http 页面直接抓取源；本地文件通过后台隐藏标签页探测 |
+| `Breaks` | Soft line breaks become `<br>`; off follows standard Markdown soft-break behavior |
+| `Linkify` | `fuzzyLink: false`, `fuzzyIP: false`, `fuzzyEmail: true`; explicit URLs remain supported. Leave whitespace between an email address and adjacent Chinese text |
+| `Typographer` | Typographic substitutions such as `(c)` → © and `(TM)` → ™ |
+| `Emoji` | Emoji shortcodes |
+| `Sup`, `Sub` | Superscript `^text^` and subscript `~text~` |
+| `TOC` | `includeLevel: [1,2]`, `containerClass: 'table-of-contents'`, `markerPattern: '/^\\[\\[toc\\]\\]/im'`, `omitTag: '<!-- omit from toc -->'`, `listType: 'ul'`. Regex strings or `/pattern/flags` are accepted; invalid regex uses the default marker. The omit comment may precede a heading or follow its text |
+| `Ins`, `Mark` | `++inserted++`, `==marked==` |
+| `Katex` | `enableBareBlocks`, `enableMathBlockInHtml`, `enableMathInlineInHtml`, `enableFencedBlocks`, `throwOnError`: all `false`; `errorColor: '#cc0000'`. Applies to `$...$`, `$$...$$`, and enabled extras. Errors fall back to source; `throwOnError` also logs errors in the standard math plugin |
+| `Mermaid` | `theme: 'auto'` (or `default`, `dark`, `neutral`, `forest`); `json` defaults to `{"theme":"auto","startOnLoad":false}`. Theme selector takes precedence. Invalid JSON objects fall back to defaults. Security, text-size limit, noninteractive rendering, and disabling HTML labels are fixed by the reader |
+| `PlantUML` | Disabled by default; sends diagram source to **www.plantuml.com** as an encoded SVG image request. No custom server setting is provided |
+| `Abbr`, `Deflist`, `Footnote` | Abbreviations, definition lists, and `[^name]` footnotes |
+| `FrontMatter` | `showMetadata: false`; recognizes a leading YAML-style `---` / `---` or `...` block. Display is a simple table of single-line `key: value` entries, not a full YAML parser. Disabling this plugin renders the original source as Markdown |
+| `MultimdTable` | `rowspan`, `multiline`, `headerless`, `multibody`, `autolabel`: all `false` |
+| `TaskLists` | `enabled`, `label`, `labelAfter`: all `false`. `enabled` allows clicks; `label` wraps the item text; `labelAfter` displays text before the checkbox and turns on `label` in the UI. Changes are not written back to the source |
+| `Alert` | `alertNames: ['important','note','tip','warning','caution']`; optional `info`, `danger`; `deep: false`. `infoContainer`, `tipContainer`, `successContainer`, `warningContainer`, `dangerContainer`: all `true`, controlling the corresponding `::: name` containers |
 
-> 存储键名自 v1.0.0 起保持稳定，升级时设置与默认值前向合并，不会丢失。
-> Storage keys are stable since v1.0.0; upgrades forward-merge settings with defaults.
+## Sidebar / 侧栏
+
+Outline and file filters run locally. Searching the outline reveals matching headings even inside folded sections. Directory sorting supports names and, where the browser supplies them, file sizes and dates. Folders-first and dotfile visibility are independent choices. Directory filter/sort choices last for the current page; sidebar visibility is persisted.
+
+The file panel lists supported Markdown extensions and subdirectories; it does not list `.txt` files. Web directory browsing requires a readable HTML directory index. File system attributes marked hidden without a leading dot cannot be identified through the browser's directory listing.
+
+## Retained compatibility keys
+
+`charsetCompat`, `charset`, `language`, `maxOutlineExpandLevel`, and `skipGuide` were stored placeholders without implemented controls. They remain readable for compatibility, but do not control current behavior. The inactive character-set and language selectors have been removed. Use UTF-8 source files. Legacy `mode: 'zen'` is understood as zen mode; the UI uses `zenMode`.

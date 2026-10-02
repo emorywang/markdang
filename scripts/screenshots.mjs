@@ -1,36 +1,16 @@
 import fs from 'node:fs'
-import os from 'node:os'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { chromium } from 'playwright-core'
+import { launchExtension } from './browser.mjs'
 
-const mkdtempSync = p => fs.mkdtempSync(p)
 const OUT = path.resolve('docs/screenshots')
-const EXT = path.resolve('extension')
 const furl = p => pathToFileURL(path.resolve(p)).href
 const DEMO = furl('demo/full-feature-test.md')
 
 fs.mkdirSync(OUT, { recursive: true })
 
-const ctx = await chromium.launchPersistentContext(mkdtempSync(path.join(os.tmpdir(), 'mdg-shot2-')), {
-  executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-  headless: true,
-  args: ['--disable-extensions-except=' + EXT, '--load-extension=' + EXT, '--no-first-run'],
-})
+const { context: ctx, extId } = await launchExtension()
 
-const mgr = await ctx.newPage()
-await mgr.goto('chrome://extensions')
-await mgr.waitForLoadState('domcontentloaded')
-const extId = await mgr.evaluate(
-  () =>
-    new Promise(res =>
-      chrome.developerPrivate.getExtensionsInfo(l => res(l.find(e => e.name.includes('MarkDang'))?.id)),
-    ),
-)
-await mgr.evaluate(
-  id => new Promise(res => chrome.developerPrivate.updateExtensionConfiguration({ extensionId: id, fileAccess: true }, res)),
-  extId,
-)
 const storage = await ctx.newPage()
 await storage.goto(`chrome-extension://${extId}/src/popup/index.html`)
 const setStorage = data => storage.evaluate(d => chrome.storage.local.set(d), data)
@@ -45,7 +25,7 @@ await page.waitForSelector('pre.markdang__mermaid svg', { timeout: 15000 }).catc
 await page.screenshot({ path: path.join(OUT, 'reader-light.png') })
 
 /* 2. folder tab panel */
-await page.goto(furl('../test-md/b.md'))
+await page.goto(furl('tests/fixtures/b.md'))
 await page.waitForSelector('.markdang-content', { timeout: 10000 })
 await page.click('.markdang__side-tab:first-child')
 await page.waitForSelector('.markdang__folder-list li a', { timeout: 10000 })
@@ -61,7 +41,7 @@ await page.screenshot({ path: path.join(OUT, 'reader-dark-outline.png') })
 await setStorage({ pageTheme: 'light' })
 
 /* 4. directory view */
-await page.goto(furl('../test-md/'))
+await page.goto(furl('tests/fixtures/'))
 await page.waitForSelector('.markdang__dir', { timeout: 10000 })
 await page.screenshot({ path: path.join(OUT, 'folder-view.png') })
 

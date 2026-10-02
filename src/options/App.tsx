@@ -1,13 +1,17 @@
 import { useEffect, useMemo, useState } from 'preact/hooks'
+import type { ComponentChildren } from 'preact'
 import {
   loadSettings,
   saveSettings,
   defaultSettings,
-  MD_PLUGIN_LIST,
+  mergeSettings,
+  onSettingsChanged,
+  DEFAULT_MD_PLUGINS,
   TEXT_SIZES,
   FONTS,
   type Settings,
   type MdPluginOptions,
+  type DeepPartial,
 } from '../shared/settings'
 
 const GEAR_SVG =
@@ -15,15 +19,15 @@ const GEAR_SVG =
 
 /* -------------------------------------------------- primitives */
 
-function Switch({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
-    <button class={`switch${checked ? ' on' : ''}`} role="switch" aria-checked={checked} onClick={() => onChange(!checked)}>
+    <button type="button" class={`switch${checked ? ' on' : ''}`} role="switch" aria-label={label} aria-checked={checked} onClick={() => onChange(!checked)}>
       <span class="knob" />
     </button>
   )
 }
 
-function Field(props: { title: string; desc?: string; wide?: boolean; children: any }) {
+function Field(props: { title: string; desc?: string; wide?: boolean; children: ComponentChildren }) {
   return (
     <div class={`field${props.wide ? ' wide' : ''}`}>
       <div class="field-text">
@@ -38,12 +42,12 @@ function Field(props: { title: string; desc?: string; wide?: boolean; children: 
 function ToggleField(props: { title: string; desc?: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <Field title={props.title} desc={props.desc}>
-      <Switch checked={props.checked} onChange={props.onChange} />
+      <Switch label={props.title} checked={props.checked} onChange={props.onChange} />
     </Field>
   )
 }
 
-function Group(props: { title?: string; children: any }) {
+function Group(props: { title?: string; children: ComponentChildren }) {
   return (
     <section class="group">
       {props.title && <div class="group-title">{props.title}</div>}
@@ -73,34 +77,36 @@ export function App({ variant = 'page' }: { variant?: 'page' | 'popup' } = {}) {
   const [section, setSection] = useState<Section>('general')
   const [expanded, setExpanded] = useState<string[]>([])
   const [cssDraft, setCssDraft] = useState('')
+  const [error, setError] = useState('')
+  const [fileAccess, setFileAccess] = useState<boolean | null>(null)
 
   useEffect(() => {
-    loadSettings().then(s => {
+    void loadSettings().then(s => {
       setSettings(s)
       setCssDraft(s.customCSS)
-    })
+    }).catch(error => setError(String(error)))
+    chrome.extension.isAllowedFileSchemeAccess(allowed => setFileAccess(allowed))
+    return onSettingsChanged(setSettings)
   }, [])
 
   const patch = useMemo(() => {
-    let timer: number | undefined
-    return (p: Partial<Settings>) => {
-      setSettings(prev => (prev ? { ...prev, ...p } : prev))
-      clearTimeout(timer)
-      timer = window.setTimeout(() => void saveSettings(p), 250)
+    return (p: DeepPartial<Settings>) => {
+      setSettings(prev => (prev ? mergeSettings(prev, p) : prev))
+      void saveSettings(p).then(() => setError('')).catch(error => setError(`保存失败：${String(error)}`))
     }
   }, [])
 
   const toggleGear = (name: string) =>
     setExpanded(x => (x.includes(name) ? x.filter(n => n !== name) : [...x, name]))
 
-  if (!settings) return <div class="loading">加载中…</div>
+  if (!settings) return <div class="loading" role="status">{error || '加载中…'}</div>
   const s = settings
   const md = s.mdPluginOptions
   const pluginOn = (name: string) => s.mdPlugins.includes(name)
   const setPlugin = (name: string, on: boolean) =>
     patch({ mdPlugins: on ? [...new Set([...s.mdPlugins, name])] : s.mdPlugins.filter(n => n !== name) })
 
-  const gearOptions = (name: string, node: any) =>
+  const gearOptions = (name: string, node: ComponentChildren) =>
     expanded.includes(name) ? <div class="plugin-options">{node}</div> : null
 
   return (
@@ -131,12 +137,13 @@ export function App({ variant = 'page' }: { variant?: 'page' | 'popup' } = {}) {
       </aside>
 
       <main class="content">
+        {error && <p role="alert">{error}</p>}
         {section === 'general' && (
           <>
             <h1>通用</h1>
             <Group>
               <ToggleField title="启用" desc="开启 MarkDang" checked={s.enable} onChange={v => patch({ enable: v })} />
-              <Field title="本地文件访问" desc="点击查看如何手动更改此权限">
+              <Field title="本地文件访问" desc={fileAccess === null ? '正在读取权限…' : fileAccess ? '已允许访问本地文件与文件夹' : '未允许；请在扩展详情开启「允许访问文件网址」'}>
                 <button class="btn" onClick={() => chrome.tabs.create({ url: `chrome://extensions/?id=${chrome.runtime.id}` })}>
                   打开扩展详情
                 </button>
@@ -171,39 +178,15 @@ export function App({ variant = 'page' }: { variant?: 'page' | 'popup' } = {}) {
               )}
             </Group>
 
-            <Group title="高级">
-              <ToggleField title="字符集兼容模式" desc="兼容通过 file:// 协议加载大型文件时的字符集问题" checked={s.charsetCompat} onChange={v => patch({ charsetCompat: v })} />
-              {s.charsetCompat && (
-                <Field title="字符集">
-                  <select value={s.charset} onChange={e => patch({ charset: (e.target as HTMLSelectElement).value })}>
-                    {['utf-8', 'gbk', 'gb2312', 'gb18030', 'big5', 'shift_jis', 'euc-kr', 'windows-1252'].map(c => (
-                      <option key={c} value={c}>
-                        {c.toUpperCase()}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-              )}
-              <Field title="语言">
-                <select value={s.language} onChange={e => patch({ language: (e.target as HTMLSelectElement).value })}>
-                  {['zh-CN', 'zh-TW', 'en', 'ja', 'ko', 'uk'].map(l => (
-                    <option key={l} value={l}>
-                      {l}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            </Group>
-
             <div class="danger-row">
               <button
                 class="btn danger"
                 onClick={() => {
                   const d = defaultSettings()
-                  saveSettings(d).then(() => {
+                  void saveSettings(d).then(() => {
                     setSettings(d)
                     setCssDraft(d.customCSS)
-                  })
+                  }).catch(error => setError(`重置失败：${String(error)}`))
                 }}
               >
                 恢复默认设置
@@ -289,9 +272,8 @@ export function App({ variant = 'page' }: { variant?: 'page' | 'popup' } = {}) {
                     onInput={e =>
                       patch({
                         customContentData: {
-                          ...s.customContentData,
                           [s.customContentData.unit === 'px' ? 'maxWidth' : 'maxPercent']: Number((e.target as HTMLInputElement).value),
-                        } as Settings['customContentData'],
+                        } as Partial<Settings['customContentData']>,
                       })
                     }
                   />
@@ -301,16 +283,15 @@ export function App({ variant = 'page' }: { variant?: 'page' | 'popup' } = {}) {
                     onInput={e =>
                       patch({
                         customContentData: {
-                          ...s.customContentData,
                           [s.customContentData.unit === 'px' ? 'maxWidth' : 'maxPercent']: Number((e.target as HTMLInputElement).value),
-                        } as Settings['customContentData'],
+                        } as Partial<Settings['customContentData']>,
                       })
                     }
                   />
                   <select
                     value={s.customContentData.unit}
                     onChange={e =>
-                      patch({ customContentData: { ...s.customContentData, unit: (e.target as HTMLSelectElement).value as 'px' | '%' } })
+                      patch({ customContentData: { unit: (e.target as HTMLSelectElement).value as 'px' | '%' } })
                     }
                   >
                     <option value="px">px</option>
@@ -346,7 +327,7 @@ export function App({ variant = 'page' }: { variant?: 'page' | 'popup' } = {}) {
           <>
             <h1>插件</h1>
             <Group>
-              <ToggleField title="所有插件" desc="一键开启或关闭全部插件" checked={s.mdPlugins.length === MD_PLUGIN_LIST.length} onChange={on => patch({ mdPlugins: on ? [...MD_PLUGIN_LIST] : [] })} />
+              <ToggleField title="本地渲染插件" desc="一键开启或关闭；需网络的 PlantUML 必须单独开启" checked={DEFAULT_MD_PLUGINS.every(name => s.mdPlugins.includes(name))} onChange={on => patch({ mdPlugins: [...(on ? DEFAULT_MD_PLUGINS : []), ...(pluginOn('PlantUML') ? ['PlantUML'] : [])] })} />
             </Group>
 
             <div class="group-card">
@@ -363,22 +344,25 @@ export function App({ variant = 'page' }: { variant?: 'page' | 'popup' } = {}) {
                 ['Mark', '标记', '启用标记 ==Marked text=='],
                 ['Katex', '数学公式', '启用数学公式 $\\sqrt(3x-1)+(1+x)^2$'],
                 ['Mermaid', 'Mermaid 图表（流程图、时序图、甘特图）', '启用 Mermaid 图表 flowchart, sequence diagram, Gantt chart'],
-                ['PlantUML', 'PlantUML 图表', '启用 PlantUML 图表 sequence, class, use case diagram'],
+                ['PlantUML', 'PlantUML 图表（需网络）', '开启后将图表源码发送到 www.plantuml.com；请勿用于敏感内容'],
                 ['Abbr', '缩写', '启用缩写 *[HTML]: Hyper Text Markup Language'],
                 ['Deflist', '释义', '启用释义 <dl>'],
-                ['Footnote', '脚注', '启用脚注语法 [*first]'],
+                ['Footnote', '脚注', '启用脚注语法 [^first]'],
                 ['FrontMatter', '元数据', '启用元数据 --- \\n title: Hi \\n ---'],
                 ['MultimdTable', '表格扩展语法', '启用 Multi-Markdown 表格'],
                 ['TaskLists', '复选框', '启用任务列表语法 - [x] Todo'],
                 ['Alert', '警告框', '强调警告信息 > [!NOTE | !TIP | !IMPORTANT | !WARNING | !CAUTION]'],
               ] as const
             ).map(([name, title, desc]) => (
-              <section class="plugin-block">
+              <section key={name} class="plugin-block">
                 <div class="plugin-head">
                   {name in md ? (
-                    <span
+                    <button
+                      type="button"
                       class={`gear${expanded.includes(name) ? ' open' : ''}`}
                       title="插件选项"
+                      aria-label={`${title}选项`}
+                      aria-expanded={expanded.includes(name)}
                       onClick={() => toggleGear(name)}
                       dangerouslySetInnerHTML={{ __html: GEAR_SVG }}
                     />
@@ -386,17 +370,17 @@ export function App({ variant = 'page' }: { variant?: 'page' | 'popup' } = {}) {
                     <span class="gear placeholder" />
                   )}
                   <Field title={title} desc={desc}>
-                    <Switch checked={pluginOn(name)} onChange={v => setPlugin(name, v)} />
+                    <Switch label={title} checked={pluginOn(name)} onChange={v => setPlugin(name, v)} />
                   </Field>
                 </div>
-                {name === 'Linkify' && gearOptions('Linkify', <LinkifyOptions options={md.Linkify} patch={p => patch({ mdPluginOptions: { ...md, Linkify: { ...md.Linkify, ...p } } })} />)}
-                {name === 'TOC' && gearOptions('TOC', <TocOptions options={md.TOC} patch={p => patch({ mdPluginOptions: { ...md, TOC: { ...md.TOC, ...p } } })} />)}
-                {name === 'Katex' && gearOptions('Katex', <KatexOptions options={md.Katex} patch={p => patch({ mdPluginOptions: { ...md, Katex: { ...md.Katex, ...p } } })} />)}
-                {name === 'Mermaid' && gearOptions('Mermaid', <MermaidOptions options={md.Mermaid} patch={p => patch({ mdPluginOptions: { ...md, Mermaid: { ...md.Mermaid, ...p } } })} />)}
-                {name === 'FrontMatter' && gearOptions('FrontMatter', <FrontMatterOptions options={md.FrontMatter} patch={p => patch({ mdPluginOptions: { ...md, FrontMatter: { ...md.FrontMatter, ...p } } })} />)}
-                {name === 'MultimdTable' && gearOptions('MultimdTable', <MultimdOptions options={md.MultimdTable} patch={p => patch({ mdPluginOptions: { ...md, MultimdTable: { ...md.MultimdTable, ...p } } })} />)}
-                {name === 'TaskLists' && gearOptions('TaskLists', <TaskListOptions options={md.TaskLists} patch={p => patch({ mdPluginOptions: { ...md, TaskLists: { ...md.TaskLists, ...p } } })} />)}
-                {name === 'Alert' && gearOptions('Alert', <AlertOptions options={md.Alert} patch={p => patch({ mdPluginOptions: { ...md, Alert: { ...md.Alert, ...p } } })} />)}
+                {name === 'Linkify' && gearOptions('Linkify', <LinkifyOptions options={md.Linkify} patch={p => patch({ mdPluginOptions: { Linkify: p } })} />)}
+                {name === 'TOC' && gearOptions('TOC', <TocOptions options={md.TOC} patch={p => patch({ mdPluginOptions: { TOC: p } })} />)}
+                {name === 'Katex' && gearOptions('Katex', <KatexOptions options={md.Katex} patch={p => patch({ mdPluginOptions: { Katex: p } })} />)}
+                {name === 'Mermaid' && gearOptions('Mermaid', <MermaidOptions options={md.Mermaid} patch={p => patch({ mdPluginOptions: { Mermaid: p } })} />)}
+                {name === 'FrontMatter' && gearOptions('FrontMatter', <FrontMatterOptions options={md.FrontMatter} patch={p => patch({ mdPluginOptions: { FrontMatter: p } })} />)}
+                {name === 'MultimdTable' && gearOptions('MultimdTable', <MultimdOptions options={md.MultimdTable} patch={p => patch({ mdPluginOptions: { MultimdTable: p } })} />)}
+                {name === 'TaskLists' && gearOptions('TaskLists', <TaskListOptions options={md.TaskLists} patch={p => patch({ mdPluginOptions: { TaskLists: p } })} />)}
+                {name === 'Alert' && gearOptions('Alert', <AlertOptions options={md.Alert} patch={p => patch({ mdPluginOptions: { Alert: p } })} />)}
               </section>
             ))}
             </div>
@@ -409,9 +393,10 @@ export function App({ variant = 'page' }: { variant?: 'page' | 'popup' } = {}) {
             <div class="about">
               <img class="about-logo" src="/brand/markdang-horizontal-bilingual-primary.svg" alt="MarkDang / 码刻档" />
               <p>
-                <b>MarkDang / 码刻档 1.0.0</b>
+                <b>MarkDang / 码刻档 {chrome.runtime.getManifest().version}</b>
               </p>
-              <p>一款独立开发的浏览器 Markdown 阅读器：无账号、无订阅、无遥测，所有功能免费开放。</p>
+              <p>浏览器 Markdown 阅读器。无账号、无订阅、无遥测；个人与非商业用途免费，商业用途需另行授权。</p>
+              <p><a href="https://github.com/emorywang/markdang" target="_blank" rel="noopener noreferrer">项目主页</a> · <a href="https://github.com/emorywang/markdang/blob/main/PRIVACY.md" target="_blank" rel="noopener noreferrer">隐私声明</a></p>
               <p class="muted">基于 Vite · TypeScript · Preact · markdown-it · KaTeX · Mermaid · highlight.js 等优秀开源组件构建。</p>
             </div>
           </>
@@ -482,7 +467,7 @@ function KatexOptions({ options, patch }: { options: MdPluginOptions['Katex']; p
       <ToggleField title="启用围栏数学公式" checked={options.enableFencedBlocks} onChange={v => patch({ enableFencedBlocks: v })} />
       <ToggleField title="渲染在 HTML 中的行内数学公式" desc="渲染在 HTML 元素中的行内数学公式" checked={options.enableMathInlineInHtml} onChange={v => patch({ enableMathInlineInHtml: v })} />
       <ToggleField title="渲染在 HTML 中的块数学公式" desc="渲染在 HTML 元素中的块级 $$ 包裹的数学公式块" checked={options.enableMathBlockInHtml} onChange={v => patch({ enableMathBlockInHtml: v })} />
-      <ToggleField title="显示错误" desc="公式解析出错时在控制台打印详细错误" checked={options.throwOnError} onChange={v => patch({ throwOnError: v })} />
+      <ToggleField title="显示解析错误" desc="公式解析失败时显示原文，并在标准公式解析路径中记录错误；关闭时由 KaTeX 使用错误颜色标记" checked={options.throwOnError} onChange={v => patch({ throwOnError: v })} />
       <Field title="错误颜色">
         <input type="color" value={options.errorColor.trim()} onChange={e => patch({ errorColor: (e.target as HTMLInputElement).value })} />
       </Field>
@@ -502,7 +487,7 @@ function MermaidOptions({ options, patch }: { options: MdPluginOptions['Mermaid'
           ))}
         </select>
       </Field>
-      <Field wide title="mermaid.initialize 的配置项" desc="JSON 格式，与主题设置合并应用">
+      <Field wide title="mermaid.initialize 的配置项" desc="JSON 对象；无效内容使用默认配置。主题由上方控制，安全设置固定为 strict">
         <textarea rows={6} spellcheck={false} value={options.json} onInput={e => patch({ json: (e.target as HTMLTextAreaElement).value })} />
       </Field>
     </>

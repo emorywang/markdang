@@ -1,4 +1,6 @@
-/* Settings schema — storage keys are part of the public contract; upgrades forward-merge with defaults. */
+import { sendMessage } from './ipc'
+
+/* Storage keys remain stable; old and partial records are normalized on read. */
 
 export const TEXT_SIZES = ['Tiny', 'Small', 'Normal', 'Medium', 'Large', 'Extra Large'] as const
 export type TextSize = (typeof TEXT_SIZES)[number]
@@ -134,7 +136,7 @@ export function defaultSettings(): Settings {
     refreshInterval: 0.5,
     charsetCompat: false,
     charset: 'utf-8',
-    language: chrome?.i18n?.getUILanguage?.() ?? 'en',
+    language: globalThis.chrome?.i18n?.getUILanguage?.() ?? 'en',
     pageTheme: 'auto',
     codeBlockDayTheme: 'light',
     codeBlockNightTheme: 'dark',
@@ -189,37 +191,86 @@ export function defaultSettings(): Settings {
   }
 }
 
-type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] }
+export type DeepPartial<T> = {
+  [K in keyof T]?: T[K] extends readonly unknown[] ? T[K] : T[K] extends object ? DeepPartial<T[K]> : T[K]
+}
 
-function mergeDefaults(base: Settings, patch: DeepPartial<Settings>): Settings {
-  const out: Settings = { ...base }
-  for (const key of Object.keys(base) as (keyof Settings)[]) {
-    const value = (patch as any)[key]
-    if (value === undefined) continue
-    const fallback = base[key]
-    if (fallback && typeof fallback === 'object' && !Array.isArray(fallback)) {
-      ;(out as any)[key] = { ...(fallback as object), ...(value as object) }
-    } else {
-      ;(out as any)[key] = value
-    }
+export function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+function mergeKnown(base: unknown, patch: unknown): unknown {
+  if (Array.isArray(base)) return Array.isArray(patch) ? [...patch] : [...base]
+  if (isRecord(base)) {
+    const source = isRecord(patch) ? patch : {}
+    return Object.fromEntries(Object.entries(base).map(([key, value]) => [
+      key, mergeKnown(value, Object.hasOwn(source, key) ? source[key] : undefined),
+    ]))
   }
-  return out
+  if (typeof patch !== typeof base || (typeof patch === 'number' && !Number.isFinite(patch))) return base
+  return patch
+}
+
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
+function choice<T extends string>(value: T, values: readonly T[], fallback: T): T {
+  return values.includes(value) ? value : fallback
+}
+
+export function normalizeSettings(value: unknown): Settings {
+  const s = mergeKnown(defaultSettings(), value) as Settings
+  s.mdPlugins = [...new Set(s.mdPlugins.filter(name => MD_PLUGIN_LIST.includes(name as typeof MD_PLUGIN_LIST[number])))]
+  s.pageTheme = choice(s.pageTheme, ['auto', 'light', 'dark'], 'auto')
+  s.codeBlockDayTheme = choice(s.codeBlockDayTheme, ['light', 'dark'], 'light')
+  s.codeBlockNightTheme = choice(s.codeBlockNightTheme, ['light', 'dark'], 'dark')
+  s.textSize = choice(s.textSize, TEXT_SIZES, 'Medium')
+  s.textFont = choice(s.textFont, FONTS, 'Default')
+  s.mode = choice(s.mode, ['normal', 'zen'], 'normal')
+  s.refreshInterval = clamp(s.refreshInterval, 0.5, 600)
+  s.maxOutlineExpandLevel = Math.round(clamp(s.maxOutlineExpandLevel, 1, 6))
+  s.customContentData.unit = choice(s.customContentData.unit, ['px', '%'], 'px')
+  s.customContentData.maxWidth = clamp(s.customContentData.maxWidth, 500, 3000)
+  s.customContentData.maxPercent = clamp(s.customContentData.maxPercent, 10, 100)
+  const opts = s.mdPluginOptions
+  opts.TOC.includeLevel = [...new Set(opts.TOC.includeLevel.filter(n => Number.isInteger(n) && n >= 1 && n <= 6))].sort()
+  opts.TOC.listType = choice(opts.TOC.listType, ['ul', 'ol'], 'ul')
+  opts.Mermaid.theme = choice(opts.Mermaid.theme, ['auto', 'default', 'dark', 'neutral', 'forest'], 'auto')
+  opts.Katex.errorColor = /^#[0-9a-f]{6}$/i.test(opts.Katex.errorColor) ? opts.Katex.errorColor : '#cc0000'
+  opts.Alert.alertNames = [...new Set(opts.Alert.alertNames.filter(name =>
+    ['important', 'note', 'tip', 'warning', 'caution', 'info', 'danger'].includes(name),
+  ))]
+  return s
+}
+
+export function mergeSettings(base: Settings, patch: unknown): Settings {
+  return normalizeSettings(mergeKnown(base, patch))
 }
 
 export async function loadSettings(): Promise<Settings> {
   const stored = await chrome.storage.local.get(null)
-  return mergeDefaults(defaultSettings(), stored as DeepPartial<Settings>)
+  return normalizeSettings(stored)
 }
 
 export async function saveSettings(patch: DeepPartial<Settings>): Promise<Settings> {
-  const current = await loadSettings()
-  const next = mergeDefaults(current, patch)
-  await chrome.storage.local.set(next as unknown as Record<string, unknown>)
+  const response = await sendMessage('settingsPatch', patch)
+  if (!response || 'error' in response) throw new Error(response?.error ?? 'Could not save settings')
+  return response.settings
+}
+
+/* The service worker serializes these writes across all extension pages. */
+export async function persistSettings(patch: unknown): Promise<Settings> {
+  if (!isRecord(patch)) throw new TypeError('Settings patch must be an object')
+  const next = mergeSettings(await loadSettings(), patch)
+  const changed = Object.fromEntries(Object.keys(next).filter(key => Object.hasOwn(patch, key)).map(key =>
+    [key, next[key as keyof Settings]],
+  ))
+  await chrome.storage.local.set(changed)
   return next
 }
 
 export function onSettingsChanged(cb: (settings: Settings) => void): () => void {
-  const listener = async () => cb(await loadSettings())
+  const listener = (_changes: Record<string, chrome.storage.StorageChange>, area: string) => {
+    if (area === 'local') void loadSettings().then(cb).catch(error => console.error('[markdang] settings', error))
+  }
   chrome.storage.onChanged.addListener(listener)
   return () => chrome.storage.onChanged.removeListener(listener)
 }
@@ -229,7 +280,6 @@ export const MD_RELEVANT_KEYS: (keyof Settings)[] = [
   'mdPlugins',
   'mdPluginOptions',
   'pageTheme',
-  'codeWrap',
 ]
 
 export function isMdRelevant(before: Settings, after: Settings): boolean {

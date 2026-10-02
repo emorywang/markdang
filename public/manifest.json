@@ -26,8 +26,7 @@
     "service_worker": "assets/background.js"
   },
   "permissions": [
-    "storage",
-    "tabs"
+    "storage"
   ],
   "web_accessible_resources": [
     {
@@ -44,20 +43,25 @@
     {
       "matches": [
         "*://*/*.md",
-        "*://*/*.mdx",
-        "*://*/*.mkd",
-        "*://*/*.txt",
-        "*://*/*.markdown",
-        "*://*/*.MD",
-        "*://*/*.MDX",
-        "*://*/*.MKD",
-        "*://*/*.TXT",
-        "*://*/*.MARKDOWN",
         "*://*/*.md?*",
+        "*://*/*.mdx",
         "*://*/*.mdx?*",
+        "*://*/*.mkd",
         "*://*/*.mkd?*",
+        "*://*/*.txt",
         "*://*/*.txt?*",
+        "*://*/*.markdown",
         "*://*/*.markdown?*",
+        "*://*/*.MD",
+        "*://*/*.MD?*",
+        "*://*/*.MDX",
+        "*://*/*.MDX?*",
+        "*://*/*.MKD",
+        "*://*/*.MKD?*",
+        "*://*/*.TXT",
+        "*://*/*.TXT?*",
+        "*://*/*.MARKDOWN",
+        "*://*/*.MARKDOWN?*",
         "file:///*"
       ],
       "js": [
@@ -68,20 +72,25 @@
     {
       "matches": [
         "*://*/*.md",
-        "*://*/*.mdx",
-        "*://*/*.mkd",
-        "*://*/*.txt",
-        "*://*/*.markdown",
-        "*://*/*.MD",
-        "*://*/*.MDX",
-        "*://*/*.MKD",
-        "*://*/*.TXT",
-        "*://*/*.MARKDOWN",
         "*://*/*.md?*",
+        "*://*/*.mdx",
         "*://*/*.mdx?*",
+        "*://*/*.mkd",
         "*://*/*.mkd?*",
+        "*://*/*.txt",
         "*://*/*.txt?*",
+        "*://*/*.markdown",
         "*://*/*.markdown?*",
+        "*://*/*.MD",
+        "*://*/*.MD?*",
+        "*://*/*.MDX",
+        "*://*/*.MDX?*",
+        "*://*/*.MKD",
+        "*://*/*.MKD?*",
+        "*://*/*.TXT",
+        "*://*/*.TXT?*",
+        "*://*/*.MARKDOWN",
+        "*://*/*.MARKDOWN?*",
         "file:///*"
       ],
       "js": [
@@ -116,5 +125,6 @@
       }
     }
   },
-  "author": "MarkDang"
+  "author": "MarkDang",
+  "minimum_chrome_version": "110"
 }

@@ -1,7 +1,7 @@
 declare module 'markdown-it-container' {
   import type MarkdownIt from 'markdown-it'
   const container: MarkdownIt.PluginWithOptions<{
-    render?: (tokens: any[], idx: number) => string
+    render?: (tokens: import('markdown-it/lib/token.mjs').default[], idx: number) => string
     marker?: string
     validate?: (params: string) => boolean
   }>
@@ -10,6 +10,7 @@ declare module 'markdown-it-container' {
 interface Window {
   __markdangRendered?: boolean
   __markdangBootCleanup?: () => void
+  __markdangMermaid?: typeof import('mermaid').default
 }
 declare module 'markdown-it-emoji' {
   import type MarkdownIt from 'markdown-it'
@@ -50,11 +51,6 @@ declare module 'markdown-it-deflist' {
 declare module 'markdown-it-footnote' {
   import type MarkdownIt from 'markdown-it'
   const plugin: MarkdownIt.PluginSimple
-  export default plugin
-}
-declare module 'markdown-it-front-matter' {
-  import type MarkdownIt from 'markdown-it'
-  const plugin: (handler: (content: string) => void) => void
   export default plugin
 }
 declare module 'markdown-it-task-lists' {

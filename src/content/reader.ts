@@ -1,16 +1,16 @@
 import katexCss from 'katex/dist/katex.min.css?inline'
-import { loadSettings, onSettingsChanged, type Settings, TEXT_SIZE_PX, FONT_STACKS, isMdRelevant } from '../shared/settings'
+import { loadSettings, saveSettings, onSettingsChanged, type Settings, TEXT_SIZE_PX, FONT_STACKS, isMdRelevant, isRecord } from '../shared/settings'
 import { sendMessage, type DirEntry } from '../shared/ipc'
-import { createRenderer, renderFrontMatterTable, slugify, mermaidThemeFor, COPY_SVG } from './markdown'
+import { createRenderer, slugify, uniqueHeadingId, mermaidThemeFor } from './markdown'
+import { sanitizeMarkdown, sanitizeDiagram } from './sanitize'
 import { READER_CSS } from './styles'
 import { SVG } from './icons'
 
 const MD_EXT = /\.(md|mdx|mkd|markdown)$/i
 const TXT_EXT = /\.txt$/i
-let settingsSeq = 0
 
 function getDirUrl(): string {
-  return location.href.replace(/[^/]+$/, '')
+  return new URL('./', location.href).href
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(
@@ -20,6 +20,10 @@ function el<K extends keyof HTMLElementTagNameMap>(
 ): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag)
   for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value)
+  if (tag === 'button') {
+    node.setAttribute('type', 'button')
+    if (attrs.title) node.setAttribute('aria-label', attrs.title)
+  }
   for (const child of children) {
     node.append(child instanceof Node ? child : document.createTextNode(child))
   }
@@ -90,7 +94,10 @@ class Reader {
   private folderFilterRow!: HTMLElement
   private outlineFilterRow!: HTMLElement
   private rawText: string | null = null
-  private mermaidReady = false
+  private rawContainer: HTMLElement | null = null
+  private renderVersion = 0
+  private mermaidQueue: Promise<void> = Promise.resolve()
+  private polling = false
   private activePanel: Panel = 'outline'
   private folderEntries: DirEntry[] | null = null
   private folderError = false
@@ -102,7 +109,6 @@ class Reader {
   private outlineQuery = ''
   private foldSet = new Set<string>()
   private headIds: string[] = []
-  private headDepths: number[] = []
   private refreshTimer: number | null = null
   private isDirPage = false
 
@@ -111,41 +117,33 @@ class Reader {
      that will not render — so the page never stays blank */
   private bootCleanup(rendered: boolean) {
     try {
-      if (rendered) (window as any).__markdangRendered = true
+      if (rendered) window.__markdangRendered = true
     } catch {
       /* ignore */
     }
     try {
-      ;(window as any).__markdangBootCleanup?.()
+      ;window.__markdangBootCleanup?.()
     } catch {
       /* ignore */
     }
   }
 
   async boot() {
-    this.settings = await loadSettings()
     this.isDirPage = isDirListingPage()
-
-    /* hidden probe tabs (opened by the background) only answer queries —
-       directory pages still report their entries first */
-    if (document.hidden) {
-      if (isDirListingPage()) {
-        sendMessage('dirEntries', { url: getDirUrl(), entries: collectDirEntries() })
+    const probe = await sendMessage('probeStatus', {})
+    if (probe) {
+      if (probe === 'dir' && this.isDirPage) {
+        await sendMessage('dirEntries', { entries: collectDirEntries() })
+      } else if (probe === 'doc') {
+        await sendMessage('docContent', { text: getRawContainer()?.textContent ?? document.body.innerText })
       }
-      chrome.runtime.onMessage.addListener((msg, _s, cb) => {
-        if (msg?.action === 'getRawDoc') {
-          const pre = getRawContainer()
-          cb({ text: pre ? pre.textContent : document.body.innerText })
-        }
-        return false
-      })
       this.bootCleanup(false)
       return
     }
+    this.settings = await loadSettings()
+    onSettingsChanged(next => this.applySettingsChange(this.settings, next))
 
     if (isDirListingPage()) {
-      /* report to the cache so md pages can list this folder instantly */
-      sendMessage('dirEntries', { url: location.href, entries: collectDirEntries() })
       if (!this.settings.enableFolderUrl || !this.settings.enable) {
         this.bootCleanup(false)
         return
@@ -161,14 +159,14 @@ class Reader {
     }
 
     this.applyAppearance()
-    onSettingsChanged(next => this.applySettingsChange(this.settings, next))
-    chrome.runtime.onMessage.addListener((msg, _s, cb) => {
-      if (msg?.action === 'getRawDoc') {
-        const pre = getRawContainer()
-        cb({ text: pre ? pre.textContent : document.body.innerText })
-      }
-      if (msg?.action === 'settingsToggle') this.toggleFromCommand(msg.data)
+    chrome.runtime.onMessage.addListener(msg => {
+      if (msg?.action === 'command') this.toggleFromCommand(msg.command)
       return false
+    })
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+      if (this.settings.pageTheme !== 'auto') return
+      if (!this.isDirPage) this.renderDoc()
+      this.applyAppearance()
     })
     this.scheduleRefresh()
   }
@@ -179,8 +177,13 @@ class Reader {
   private buildChrome() {
     document.head.appendChild(el('style', { id: 'markdang-style' }, [READER_CSS + '\n' + katexCss]))
     const pre = getRawContainer()
-    this.rawText = pre?.textContent ?? null
-    pre?.classList.add('markdang-host')
+    this.rawContainer = pre
+    this.rawText = pre?.textContent ?? document.body.innerText
+    if (this.isDirPage) {
+      const host = el('div', { class: 'markdang-host' })
+      host.append(...Array.from(document.body.childNodes))
+      document.body.append(host)
+    } else pre?.classList.add('markdang-host')
 
     this.root = el('div', { class: 'markdang' })
     const layout = el('div', { class: 'markdang-layout' })
@@ -209,12 +212,13 @@ class Reader {
     const goTop = el('button', { class: 'markdang__btn markdang__btn--go-top', title: '返回顶部' }, [html('span', SVG.top)])
     goTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }))
     const exitZen = el('button', { class: 'markdang__btn markdang__btn--exit-zen', title: '退出禅模式 (Esc)' }, [html('span', SVG.zen)])
-    exitZen.addEventListener('click', () => this.patchSettings({ zenMode: false }))
+    exitZen.addEventListener('click', () => this.patchSettings({ zenMode: false, mode: 'normal' }))
     buttons.append(sideBtn, rawBtn, themeBtn, printBtn, fsBtn, exitZen, goTop)
 
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') {
-        if (this.settings.zenMode) this.patchSettings({ zenMode: false })
+        if (this.settings.zenMode || this.settings.mode === 'zen') this.patchSettings({ zenMode: false, mode: 'normal' })
+        this.root.querySelector('.markdang__modal')?.remove()
         this.closeSideMenu?.()
       }
     })
@@ -352,9 +356,6 @@ class Reader {
     outlineTab.addEventListener('click', () => setActive('outline'))
 
     side.append(tabs, outlinePanel, folderPanel, menu)
-    this.outlinePanelEl = outlinePanel
-    this.folderPanelEl = folderPanel
-    this.setActiveTab = setActive
     return side
   }
 
@@ -372,7 +373,11 @@ class Reader {
       el('span', { class: 'markdang__menu-check' }, [checked ? '✓' : '']),
       label,
     ])
-    item.addEventListener('click', onToggle)
+    item.setAttribute('aria-pressed', String(checked))
+    item.addEventListener('click', () => {
+      onToggle()
+      this.closeSideMenu?.()
+    })
     return item
   }
 
@@ -381,23 +386,24 @@ class Reader {
   }
 
   private closeSideMenu?: () => void
-  private outlinePanelEl!: HTMLElement
-  private folderPanelEl!: HTMLElement
-  private setActiveTab!: (panel: Panel) => void
 
   /* ------------------------------------------------------------ *
    * document rendering
    * ------------------------------------------------------------ */
   private renderDoc() {
-    const dark = this.resolveDark()
-    const renderer = createRenderer(this.settings, dark)
+    const version = ++this.renderVersion
+    const renderer = createRenderer(this.settings)
     const result = renderer.render(this.rawText ?? document.body.innerText)
 
     this.content.innerHTML = ''
     if (result.frontMatter) {
-      this.content.appendChild(html('div', result.frontMatter))
+      const front = el('div')
+      front.append(sanitizeMarkdown(result.frontMatter))
+      this.content.append(front)
     }
-    this.content.appendChild(html('div', result.html))
+    const body = el('div')
+    body.append(sanitizeMarkdown(result.html))
+    this.content.append(body)
 
     const firstHeading = this.content.querySelector('h1, h2, h3')
     if (firstHeading?.textContent?.trim()) {
@@ -406,7 +412,7 @@ class Reader {
 
     this.decorateHeadings()
     this.renderOutline()
-    void this.renderMermaid(result.mermaidBlocks)
+    this.mermaidQueue = this.mermaidQueue.then(() => this.renderMermaid(result.mermaidBlocks, version))
     this.bindContentEvents()
     this.bootCleanup(true)
   }
@@ -414,23 +420,18 @@ class Reader {
   /* idempotent heading decoration — anchors and ids are added at most once,
      so re-rendering the outline never accumulates stray '#' anchors */
   private decorateHeadings() {
-    const seen = new Map<string, number>()
+    const seen = new Set<string>()
     const heads = this.content.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6')
     this.headIds = []
-    this.headDepths = []
     heads.forEach(head => {
-      const depth = Number(head.tagName.slice(1))
-      const base = slugify(head.textContent ?? '')
-      const count = seen.get(base) ?? 0
-      seen.set(base, count + 1)
-      const id = count === 0 ? base : `${base}-${count}`
+      const base = head.id || slugify(head.textContent ?? '')
+      const id = uniqueHeadingId(base, seen)
       if (!head.querySelector('.markdang__head-anchor')) {
-        const anchor = el('a', { class: 'markdang__head-anchor', href: `#${id}` }, ['#'])
+        const anchor = el('a', { class: 'markdang__head-anchor', href: `#${encodeURIComponent(id)}`, 'aria-label': 'Link to heading' }, ['#'])
         head.prepend(anchor)
       }
       if (head.id !== id) head.id = id
       this.headIds.push(id)
-      this.headDepths.push(depth)
     })
   }
 
@@ -438,27 +439,32 @@ class Reader {
     this.outlineList.innerHTML = ''
     const heads = Array.from(this.content.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6'))
     const lis: HTMLElement[] = []
-    heads.forEach(head => {
+    heads.forEach((head, index) => {
       const depth = Number(head.tagName.slice(1))
       const clone = head.cloneNode(true) as HTMLElement
       clone.querySelector('.markdang__head-anchor')?.remove()
       const text = (clone.textContent ?? '').trim()
       const li = el('li', { 'data-depth': String(depth) })
       li.style.setProperty('--mdg-indent', String(depth - 1))
-      const link = el('a', { href: `#${head.id}` }, [text])
-      const index = heads.indexOf(head)
+      const link = el('a', { href: `#${encodeURIComponent(head.id)}` }, [text])
       const nextHead = heads[index + 1]
       const hasChildren = !!nextHead && Number(nextHead.tagName.slice(1)) > depth
       if (hasChildren) {
         li.classList.add('has-children')
       }
       if (this.settings.isOutlineExpandable && hasChildren) {
-        const fold = el('span', { class: 'markdang__fold' }, [html('span', SVG.chevron)])
+        const fold = el('span', { class: 'markdang__fold', role: 'button', tabindex: '0', 'aria-label': `折叠/展开 ${text}` }, [html('span', SVG.chevron)])
         fold.addEventListener('click', e => {
           e.preventDefault()
           e.stopPropagation()
           this.foldSet.has(head.id) ? this.foldSet.delete(head.id) : this.foldSet.add(head.id)
           this.syncOutline()
+        })
+        fold.addEventListener('keydown', event => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            fold.click()
+          }
         })
         link.prepend(fold)
       }
@@ -480,48 +486,55 @@ class Reader {
     this.outlineLiElements.forEach((li, i) => {
       const depth = Number(li.dataset.depth ?? 1)
       while (ancestors.length && ancestors[ancestors.length - 1].depth >= depth) ancestors.pop()
-      const folded = this.foldSet.has(this.headIds[i] ?? '')
+      const folded = this.settings.isOutlineExpandable && this.foldSet.has(this.headIds[i] ?? '')
       li.classList.toggle('folded', folded)
+      li.querySelector('.markdang__fold')?.setAttribute('aria-expanded', String(!folded))
       const filterHidden = !!this.outlineQuery && !li.textContent!.toLowerCase().includes(this.outlineQuery)
       li.classList.toggle('filter-hidden', filterHidden)
-      li.classList.toggle('fold-hidden', filterHidden || ancestors.some(a => a.folded))
+      li.classList.toggle('fold-hidden', filterHidden || (!this.outlineQuery && ancestors.some(a => a.folded)))
       ancestors.push({ depth, folded })
     })
   }
 
-  private async renderMermaid(blocks: { code: string }[]) {
-    if (!blocks.length) return
+  private async renderMermaid(blocks: { code: string }[], version: number) {
+    if (!blocks.length || version !== this.renderVersion) return
     const placeholders = this.content.querySelectorAll<HTMLElement>('pre.markdang__mermaid')
     try {
       /* lazy-load the mermaid bundle from the extension (web-accessible) */
       await import(/* @vite-ignore */ chrome.runtime.getURL('assets/mermaid.js'))
-      const mermaid = (window as any).__markdangMermaid
+      if (version !== this.renderVersion) return
+      const mermaid = window.__markdangMermaid
       if (!mermaid) throw new Error('mermaid bundle missing')
       const dark = this.resolveDark()
       let config: Record<string, unknown> = {}
       try {
-        config = JSON.parse(this.settings.mdPluginOptions.Mermaid.json || '{}')
+        const parsed: unknown = JSON.parse(this.settings.mdPluginOptions.Mermaid.json || '{}')
+        if (isRecord(parsed)) config = parsed
       } catch {
         /* invalid json — fall back to defaults */
       }
       mermaid.initialize({
-        startOnLoad: false,
-        securityLevel: 'loose',
         ...config,
+        startOnLoad: false,
+        securityLevel: 'strict',
+        suppressErrorRendering: true,
+        maxTextSize: 50000,
+        htmlLabels: false,
+        flowchart: { ...(isRecord(config.flowchart) ? config.flowchart : {}), htmlLabels: false },
+        secure: ['secure', 'securityLevel', 'startOnLoad', 'maxTextSize', 'suppressErrorRendering', 'htmlLabels'],
         theme: mermaidThemeFor(this.settings, dark) as 'dark' | 'default' | 'neutral' | 'forest',
       })
-      this.mermaidReady = true
       let index = 0
       for (const placeholder of Array.from(placeholders)) {
         const code = decodeURIComponent(placeholder.dataset.mermaid ?? '')
         if (!code) continue
         try {
-          const { svg } = await mermaid.render(`mdg-mermaid-${settingsSeq}-${index++}`, code)
-          placeholder.innerHTML = svg
+          const { svg } = await mermaid.render(`mdg-mermaid-${version}-${index++}`, code)
+          if (version !== this.renderVersion || !placeholder.isConnected) return
+          placeholder.innerHTML = sanitizeDiagram(svg)
         } catch (err) {
-          placeholder.innerHTML = `<code></code><div class="markdang__mermaid-error">${
-            (err as Error)?.message ?? 'render error'
-          }</div>`
+          if (version !== this.renderVersion || !placeholder.isConnected) return
+          placeholder.replaceChildren(el('code', {}, [code]), el('div', { class: 'markdang__mermaid-error' }, [err instanceof Error ? err.message : 'Render error']))
         }
       }
     } catch (err) {
@@ -532,12 +545,26 @@ class Reader {
   private bindContentEvents() {
     /* code copy */
     this.content.querySelectorAll<HTMLButtonElement>('.markdang__btn--copy').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const code = btn.parentElement?.querySelector('code')?.textContent ?? ''
-        navigator.clipboard.writeText(code).then(() => {
+        try {
+          if (navigator.clipboard) await navigator.clipboard.writeText(code)
+          else {
+            const text = el('textarea')
+            text.value = code
+            text.style.position = 'fixed'
+            text.style.opacity = '0'
+            this.root.append(text)
+            text.select()
+            const copied = document.execCommand('copy')
+            text.remove()
+            if (!copied) throw new Error('Clipboard unavailable')
+          }
           btn.classList.add('copied')
           setTimeout(() => btn.classList.remove('copied'), 1200)
-        })
+        } catch {
+          btn.title = '复制失败，请手动选择代码'
+        }
       })
     })
     /* image zoom */
@@ -610,13 +637,14 @@ class Reader {
     }
     this.folderList.innerHTML = ''
     this.folderList.append(el('li', { class: 'markdang__panel-hint' }, ['正在加载目录…']))
-    const dirUrl = location.href.replace(/[^/]+$/, '')
+    const dirUrl = getDirUrl()
     let entries: DirEntry[] | null = null
     if (location.protocol === 'file:') {
       entries = await sendMessage('listDir', { url: dirUrl })
       if (!entries) this.folderError = true
     } else {
       entries = await this.fetchHttpDir(dirUrl)
+      if (!entries) this.folderError = true
     }
     this.folderEntries = entries ?? []
     this.renderFolderList()
@@ -624,20 +652,20 @@ class Reader {
 
   private async fetchHttpDir(dirUrl: string): Promise<DirEntry[] | null> {
     try {
-      const res = await fetch(dirUrl, { credentials: 'same-origin' })
+      const res = await fetch(dirUrl, { credentials: 'same-origin', signal: AbortSignal.timeout(8000) })
       if (!res.ok || !(res.headers.get('content-type') ?? '').includes('text/html')) return null
       const doc = new DOMParser().parseFromString(await res.text(), 'text/html')
-      const base = doc.createElement('base')
-      base.href = dirUrl
-      doc.head.appendChild(base)
       const entries = new Map<string, DirEntry>()
       doc.querySelectorAll('a[href]').forEach(a => {
         try {
-          const url = new URL((a as HTMLAnchorElement).href)
-          const name = decodeURIComponent(url.pathname.split('/').pop() ?? '')
-          if (!name || url.pathname.endsWith('/')) return
-          if (!MD_EXT.test(name)) return
-          entries.set(url.href, { name, href: url.href, isDir: false })
+          const url = new URL(a.getAttribute('href') ?? '', dirUrl)
+          if (url.origin !== location.origin || url.href === dirUrl || !url.pathname.startsWith(new URL(dirUrl).pathname)) return
+          const relative = url.pathname.slice(new URL(dirUrl).pathname.length).replace(/\/$/, '')
+          if (!relative || relative.includes('/')) return
+          const isDir = url.pathname.endsWith('/')
+          const name = decodeURIComponent(relative)
+          if (!isDir && !MD_EXT.test(name)) return
+          entries.set(url.href, { name, href: url.href, isDir })
         } catch {
           /* skip */
         }
@@ -662,7 +690,7 @@ class Reader {
           return (this.parseSize(a.size) - this.parseSize(b.size)) * factor || collator.compare(a.name, b.name)
         }
         if (this.folderSortKey === 'date') {
-          return (Date.parse(a.date ?? '') || 0 - (Date.parse(b.date ?? '') || 0)) * factor || collator.compare(a.name, b.name)
+          return ((Date.parse(a.date ?? '') || 0) - (Date.parse(b.date ?? '') || 0)) * factor || collator.compare(a.name, b.name) * factor
         }
         return collator.compare(a.name, b.name) * factor
       })
@@ -677,11 +705,12 @@ class Reader {
     if (!text) return 0
     const match = text.match(/^([\d.]+)\s*([kMGTP]?B?)$/i)
     if (!match) return 0
-    const units: Record<string, number> = { B: 1, KB: 1e3, MB: 1e6, GB: 1e9, TB: 1e12, k: 1e3, M: 1e6, G: 1e9 }
+    const units: Record<string, number> = { B: 1, KB: 1e3, MB: 1e6, GB: 1e9, TB: 1e12, PB: 1e15, K: 1e3, M: 1e6, G: 1e9, T: 1e12, P: 1e15 }
     return parseFloat(match[1]) * (units[match[2].toUpperCase()] ?? 1)
   }
 
   private renderFolderList() {
+    if (this.isDirPage && this.dirListEl) this.renderDirList()
     this.folderList.innerHTML = ''
     if (this.folderError && !this.folderEntries?.length) {
       this.folderList.append(el('li', { class: 'markdang__panel-hint' }, ['无法获取目录列表']))
@@ -781,21 +810,12 @@ class Reader {
     const afterDir = next.enable && next.enableFolderUrl && this.isDirPage
     this.settings = next
 
-    /* entering reader modes that were off at boot needs a fresh boot */
-    if (!beforeDoc && afterDoc) {
+    if (beforeDoc !== afterDoc || beforeDir !== afterDir) {
+      if (this.refreshTimer) clearTimeout(this.refreshTimer)
       location.reload()
       return
     }
-    if (!beforeDir && afterDir && !afterDoc) {
-      location.reload()
-      return
-    }
-    /* leaving reader modes just tears the UI down — no reload, no races */
-    if ((beforeDoc && !afterDoc) || (beforeDir && !afterDir)) {
-      this.root.remove()
-      document.body.classList.remove('markdang-raw')
-      return
-    }
+    if (!this.root) return
 
     if (afterDoc && isMdRelevant(before, next)) {
       this.renderDoc()
@@ -807,20 +827,22 @@ class Reader {
     this.scheduleRefresh()
   }
 
-  private toggleFromCommand(patch: Record<string, unknown>) {
-    const next: Record<string, unknown> = {}
-    for (const [key, value] of Object.entries(patch)) {
-      if (value === 'toggle') {
-        ;(next as any)[key] = !(this.settings as any)[key]
-      } else {
-        ;(next as any)[key] = value
-      }
+  private toggleFromCommand(command: string) {
+    if (command === 'toggleSide') this.patchSettings({ sideCollapsed: !this.settings.sideCollapsed })
+    if (command === 'toggleCentered') this.patchSettings({ centered: !this.settings.centered })
+    if (command === 'toggleRefresh') this.patchSettings({ refresh: !this.settings.refresh })
+    if (command === 'toggleTheme') {
+      const cycle = ['light', 'dark', 'auto'] as const
+      this.patchSettings({ pageTheme: cycle[(cycle.indexOf(this.settings.pageTheme) + 1) % cycle.length] })
     }
-    void this.patchSettings(next)
   }
 
   private async patchSettings(patch: Partial<Settings>) {
-    await import('../shared/settings').then(m => m.saveSettings(patch))
+    try {
+      await saveSettings(patch)
+    } catch (error) {
+      console.error('[markdang] could not save settings', error)
+    }
   }
 
   /* ------------------------------------------------------------ *
@@ -831,29 +853,31 @@ class Reader {
       clearTimeout(this.refreshTimer)
       this.refreshTimer = null
     }
-    if (!this.settings.refresh || !isRenderableDoc(this.settings)) return
+    if (!this.settings.enable || !this.settings.refresh || !isRenderableDoc(this.settings) || this.polling) return
     const interval = Math.max(0.5, this.settings.refreshInterval || 0.5) * 1000
     this.refreshTimer = window.setTimeout(() => void this.poll(), interval)
   }
 
   private async poll() {
+    this.polling = true
     try {
       let text: string | null = null
       if (location.protocol === 'file:') {
         text = await sendMessage('probeDoc', { url: location.href })
       } else {
-        const res = await fetch(location.href, { credentials: 'same-origin', cache: 'no-store' })
-        if (res.ok) text = await res.text()
+        const res = await fetch(location.href, { credentials: 'same-origin', cache: 'no-store', signal: AbortSignal.timeout(8000) })
+        if (res.ok && /^text\/(plain|markdown|x-markdown)\b/i.test(res.headers.get('content-type') ?? '')) text = await res.text()
       }
       if (text != null && this.rawText != null && text !== this.rawText) {
         this.rawText = text
-        const pre = getRawContainer()
+        const pre = this.rawContainer
         if (pre) pre.textContent = text
         this.renderDoc()
       }
     } catch {
       /* network hiccup — keep polling */
     }
+    this.polling = false
     this.scheduleRefresh()
   }
 }
@@ -863,5 +887,15 @@ export async function bootReader() {
   if (booted) return
   booted = true
   const reader = new Reader()
-  await reader.boot()
+  try {
+    await reader.boot()
+  } catch (error) {
+    window.__markdangBootCleanup?.()
+    document.querySelector('.markdang')?.remove()
+    document.querySelectorAll('.markdang-host').forEach(node => node.classList.remove('markdang-host'))
+    document.getElementById('markdang-style')?.remove()
+    document.getElementById('markdang-custom-css')?.remove()
+    document.body.classList.remove('markdang-body', 'markdang-raw', 'task-label-on', 'task-label-after')
+    console.error('[markdang] could not start reader', error)
+  }
 }

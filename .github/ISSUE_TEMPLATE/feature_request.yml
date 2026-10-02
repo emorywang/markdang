@@ -20,5 +20,5 @@ body:
     attributes:
       label: 确认 / Confirm
       options:
-        - label: 官方商店版无此功能，或实现方式不同 / not available or different in the official build
+        - label: 已查看 README 与现有 Issue / I checked the README and existing issues
         - label: 愿意提交 PR / willing to submit a PR

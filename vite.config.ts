@@ -2,8 +2,7 @@ import { defineConfig } from 'vite'
 import preact from '@preact/preset-vite'
 import { resolve } from 'node:path'
 
-/* Content scripts and MV3 service workers may not use static import
-   statements, so they are built as single-file IIFE bundles with all
+/* Manifest content scripts and this classic MV3 worker use IIFEs, so they are built as single-file IIFE bundles with all
    dynamic imports inlined. Extension pages (options/popup) may use
    ES modules and are built together in the "pages" pass. */
 
@@ -96,4 +95,6 @@ const mermaid = defineConfig({
 })
 
 const targets = { pages, content, background, boot, mermaid }
-export default targets[process.env.MDR_TARGET ?? 'pages']
+const target = process.env.MDR_TARGET ?? 'pages'
+if (!(target in targets)) throw new Error(`Unknown build target: ${target}`)
+export default targets[target as keyof typeof targets]

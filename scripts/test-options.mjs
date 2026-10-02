@@ -1,13 +1,9 @@
 /* Every settings option must have an observable effect on the demo page. */
-import fs from 'node:fs'
-import os from 'node:os'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { chromium } from 'playwright-core'
+import { launchExtension } from './browser.mjs'
 
-const mkdtempSync = p => fs.mkdtempSync(p)
 const furl = p => pathToFileURL(path.resolve(p)).href
-const EXT = path.resolve('extension')
 const DEMO = furl('demo/full-feature-test.md')
 const results = []
 const ok = (name, cond, extra = '') => {
@@ -15,21 +11,8 @@ const ok = (name, cond, extra = '') => {
   console.log(`${cond ? 'PASS' : 'FAIL'}  ${name}${extra ? ' | ' + extra : ''}`)
 }
 
-const ctx = await chromium.launchPersistentContext(mkdtempSync(path.join(os.tmpdir(), 'mdg-opt-')), {
-  executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-  headless: true,
-  args: ['--disable-extensions-except=' + EXT, '--load-extension=' + EXT, '--no-first-run'],
-})
-const mgr = await ctx.newPage()
-await mgr.goto('chrome://extensions')
-await mgr.waitForLoadState('domcontentloaded')
-const extId = await mgr.evaluate(
-  () => new Promise(res => chrome.developerPrivate.getExtensionsInfo(l => res(l.find(e => e.name.includes('MarkDang'))?.id))),
-)
-await mgr.evaluate(
-  id => new Promise(res => chrome.developerPrivate.updateExtensionConfiguration({ extensionId: id, fileAccess: true }, res)),
-  extId,
-)
+const { context: ctx, extId } = await launchExtension()
+
 const store = await ctx.newPage()
 await store.goto(`chrome-extension://${extId}/src/popup/index.html`)
 const set = data => store.evaluate(d => chrome.storage.local.set(d), data)
@@ -230,7 +213,7 @@ const checkboxFirst = await evalInPage(() => {
   const li = document.querySelector('.markdang-content li.task-list-item')
   const input = li?.querySelector('.task-list-item-checkbox')
   const label = li?.querySelector('label')
-  return !!input && !!label && label.getBoundingClientRect().left < input.getBoundingClientRect().left
+  return !!input && !!label && input.getBoundingClientRect().left <= label.getBoundingClientRect().left
 })
 ok('tasklist: option off -> checkbox before text', checkboxFirst)
 await set({
@@ -275,7 +258,6 @@ ok('code: light theme on light page -> dark text', codeLight.bg === 'rgb(246, 24
 
 await page.close()
 await store.close()
-await mgr.close()
 await ctx.close()
 
 const failed = results.filter(r => !r.pass)
