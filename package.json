@@ -1,0 +1,44 @@
+{
+  "name": "markdang",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "scripts": {
+    "dev": "node scripts/build.mjs",
+    "build": "node scripts/build.mjs",
+    "zip": "node scripts/zip.mjs"
+  },
+  "dependencies": {
+    "@mdit/plugin-alert": "^0.22.1",
+    "@traptitech/markdown-it-katex": "^3.6.0",
+    "highlight.js": "^11.11.0",
+    "markdown-it": "^14.1.0",
+    "markdown-it-abbr": "^2.0.0",
+    "markdown-it-container": "^4.0.0",
+    "markdown-it-deflist": "^4.0.0",
+    "markdown-it-emoji": "^3.0.0",
+    "markdown-it-footnote": "^4.0.0",
+    "markdown-it-front-matter": "^0.2.3",
+    "markdown-it-ins": "^4.0.0",
+    "markdown-it-mark": "^4.0.0",
+    "markdown-it-multimd-table": "^4.2.3",
+    "markdown-it-sub": "^2.0.0",
+    "markdown-it-sup": "^2.0.0",
+    "markdown-it-task-lists": "^2.1.1",
+    "mermaid": "^11.4.1",
+    "pako": "^2.2.0",
+    "preact": "^10.24.0"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.9.1",
+    "@types/chrome": "^0.0.280",
+    "@types/markdown-it": "^14.1.2",
+    "@types/pako": "^2.0.4",
+    "archiver": "^7.0.1",
+    "playwright-core": "^1.63.0",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11"
+  },
+  "description": "码刻档 —— 在浏览器中舒适阅读 Markdown。无账号、无订阅、全功能开放。"
+}

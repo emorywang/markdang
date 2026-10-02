@@ -1,0 +1,17 @@
+# dependencies
+node_modules/
+
+# build outputs (use `npm run build`; releases ship zips)
+extension/
+dist/
+
+# debug & test artifacts
+*.cjs
+scripts/debug-*
+*.log
+
+# editor & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
