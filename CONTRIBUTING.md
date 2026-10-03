@@ -1,44 +1,19 @@
-# 贡献指南 / Contributing
+# Contributing
 
-感谢关注本项目！欢迎 Issue 与 PR。
-Thanks for your interest — issues and PRs are welcome.
+[简体中文](CONTRIBUTING.zh-CN.md) · [README](README.md)
 
-## 提交 Issue / Filing issues
+Issues and pull requests are welcome. The code is source-available under the [PolyForm Noncommercial License](LICENSE); brand assets are governed separately by [TRADEMARKS.md](TRADEMARKS.md).
 
-请包含：
-Please include:
+## Issues
 
-1. 浏览器与版本（Chrome/Edge）
-2. 复现步骤与最小示例文件（可脱敏）
-3. 相关设置的截图或导出（设置 → 恢复默认设置前请先备份）
-4. `chrome://extensions` → 本扩展 → Service Worker 控制台的报错（如有）
+Include the extension version, browser and version, reproducible steps, expected and actual behavior, and a minimal sanitized Markdown example if needed. Screenshots and relevant settings help. Running the project's test suites is **not** required to report a bug. Use [the security policy](SECURITY.md) for vulnerabilities.
 
-## 提交 PR / Submitting PRs
+## Pull requests
 
-1. Fork 并创建分支：`feat/xxx` 或 `fix/xxx`
-2. 开发流程见 [docs/development.md](docs/development.md)
-3. **提交前必须全部通过**（这是本项目的硬性约定，避免让其他用户当测试员）：
+1. Create a focused `fix/...` or `feat/...` branch and follow [the development guide](docs/development.md).
+2. Run `npm run check` and `npm run test:e2e` before requesting review. State any check you could not run and why.
+3. Add regression coverage for a corrected failure or new behavior. Keep fixtures in the repository.
+4. Update both language versions of relevant docs when changing behavior. Include before/after screenshots for visible UI changes, and keep interface text pairs in `src/shared/i18n.ts` complete.
+5. Use Conventional Commit messages such as `fix: refresh local documents without stale cache`.
 
-   ```bash
-   npx tsc --noEmit && npm run build
-   node scripts/e2e.mjs && node scripts/test-ux.mjs && node scripts/test-options.mjs
-   ```
-
-4. 新增/变更设置项时：
-   - 在 `src/shared/settings.ts` 补充 schema（存储键名一经发布即视为稳定契约，不做破坏性变更）
-   - 在 `demo/全功能测试.md` 增加可观测示例
-   - 在 `test-options.mjs` 增加断言
-   - 在 `docs/settings.md` 与 README 设置表同步
-
-5. UI 改动请附带修改前后的截图
-
-## 代码风格 / Style
-
-- TypeScript 严格模式；不加 `any`（与 DOM/扩展 API 边界除外）
-- 提交信息遵循 [Conventional Commits](https://www.conventionalcommits.org/zh-hans/)（`feat:` / `fix:` / `docs:` / `chore:` / `test:`）
-- 注释只写「为什么」，不写「做了什么」
-
-## 行为准则 / Code of Conduct
-
-保持友善与专业。项目维护者保留处理不当言论的权利。
-Be kind and professional.
+Use strict TypeScript, typed application messages, and small functions with a clear purpose. Keep necessary boundary assertions local. Comments should explain non-obvious decisions. Prefer accurate documentation and working controls over placeholders.

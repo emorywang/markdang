@@ -1,4 +1,5 @@
 import MarkdownIt from 'markdown-it'
+import type Token from 'markdown-it/lib/token.mjs'
 import { full as emojiPlugin } from 'markdown-it-emoji'
 import subPlugin from 'markdown-it-sub'
 import supPlugin from 'markdown-it-sup'
@@ -7,7 +8,6 @@ import markPlugin from 'markdown-it-mark'
 import abbrPlugin from 'markdown-it-abbr'
 import deflistPlugin from 'markdown-it-deflist'
 import footnotePlugin from 'markdown-it-footnote'
-import tasklistsPlugin from 'markdown-it-task-lists'
 import multimdTablePlugin from 'markdown-it-multimd-table'
 import containerPlugin from 'markdown-it-container'
 import katexPlugin from '@traptitech/markdown-it-katex'
@@ -17,14 +17,50 @@ import hljs from 'highlight.js'
 import { alert as mditAlert } from '@mdit/plugin-alert'
 import type { Settings, MdPluginOptions } from '../shared/settings'
 
-const FRONT_MATTER_KEY = 'mdReaderFrontMatter'
+interface RenderEnv { frontMatter?: string }
+
+/* Keep parsed inline tokens intact when a label precedes its checkbox.
+   Options belong to this renderer; separate instances never share state. */
+function tasklistsPlugin(md: MarkdownIt, opts: MdPluginOptions['TaskLists']) {
+  md.core.ruler.after('inline', 'markdang_task_lists', state => {
+    const lists: Token[] = []
+    const prefix = `mdg-task-${crypto.getRandomValues(new Uint32Array(1))[0].toString(36)}`
+    const html = (content: string) => {
+      const token = new state.Token('html_inline', '', 0)
+      token.content = content
+      return token
+    }
+    state.tokens.forEach((token, index) => {
+      if (token.type === 'bullet_list_open' || token.type === 'ordered_list_open') lists.push(token)
+      if (token.type === 'bullet_list_close' || token.type === 'ordered_list_close') lists.pop()
+      const item = state.tokens[index - 2]
+      if (token.type !== 'inline' || state.tokens[index - 1]?.type !== 'paragraph_open' || item?.type !== 'list_item_open') return
+      const match = token.content.match(/^\[([ xX])\] /)
+      if (!match || token.children?.[0]?.type !== 'text') return
+      token.content = token.content.slice(3)
+      token.children[0].content = token.children[0].content.slice(3)
+      const id = `${prefix}-${index}`
+      const input = `<input class="task-list-item-checkbox" type="checkbox"${match[1] !== ' ' ? ' checked' : ''}${opts.enabled ? '' : ' disabled'}${opts.label && opts.labelAfter ? ` id="${id}"` : ''}>`
+      if (opts.label && opts.labelAfter) {
+        token.children.unshift(html(`<label class="task-list-item-label" for="${id}">`))
+        token.children.push(html(`</label> ${input}`))
+      } else {
+        token.children.unshift(html(`${opts.label ? '<label>' : ''}${input}`))
+        if (opts.label) token.children.push(html('</label>'))
+      }
+      item.attrJoin('class', `task-list-item${opts.enabled ? ' enabled' : ''}`)
+      const list = lists.at(-1)
+      if (list && !list.attrGet('class')?.split(' ').includes('contains-task-list')) list.attrJoin('class', 'contains-task-list')
+    })
+  })
+}
 
 /* ---------------------------------------------------------------- *
  * bare math: \begin{env} ... \end{env} blocks without $$ wrappers
  * (the @traptitech katex plugin does not implement this option)
  * ---------------------------------------------------------------- */
 function bareMathPlugin(md: MarkdownIt) {
-  md.block.ruler.before('fence', 'md_reader_bare_math', (state, startLine, endLine, silent) => {
+  md.block.ruler.before('fence', 'markdang_bare_math', (state, startLine, endLine, silent) => {
     const firstLine = state.src.slice(state.bMarks[startLine], state.eMarks[startLine])
     const match = firstLine.match(/^\s*\\begin\{([a-zA-Z*]+)\}/)
     if (!match) return false
@@ -50,36 +86,43 @@ function bareMathPlugin(md: MarkdownIt) {
  * math inside raw html tokens ($..$ inline, $$..$$ block)
  * ---------------------------------------------------------------- */
 function htmlMathPlugin(md: MarkdownIt, opts: MdPluginOptions['Katex']) {
-  const renderMath = (latex: string, display: boolean): string => {
-    try {
-      return katex.renderToString(latex, {
-        displayMode: display,
-        output: 'html',
-        throwOnError: opts.throwOnError,
-        errorColor: opts.errorColor,
-      })
-    } catch {
-      return display
-        ? `<span class="katex-display">${escapeHtml(latex)}</span>`
-        : escapeHtml(latex)
-    }
-  }
-  /* block option replaces $$..$$ inside html blocks; inline option
-     replaces $..$ inside html blocks and html_inline tokens */
-  const replaceBlock = (html: string): string =>
-    html.replace(/\$\$([\s\S]+?)\$\$/g, (_, tex) => renderMath(tex.trim(), true))
-  const replaceInline = (html: string): string =>
-    html.replace(/\$([^$\n]+?)\$/g, (_, tex) => renderMath(tex.trim(), false))
-
-  md.core.ruler.push('md_reader_html_math', state => {
-    state.tokens.forEach(token => {
-      if (token.type === 'html_block') {
-        if (opts.enableMathBlockInHtml) token.content = replaceBlock(token.content)
-        if (opts.enableMathInlineInHtml) token.content = replaceInline(token.content)
-      } else if (token.type === 'html_inline' && opts.enableMathInlineInHtml) {
-        token.content = replaceInline(token.content)
+  md.core.ruler.push('markdang_html_math', state => {
+    for (const token of state.tokens) {
+      if (token.type !== 'html_block') continue
+      const template = document.createElement('template')
+      template.innerHTML = token.content
+      const walker = document.createTreeWalker(template.content, NodeFilter.SHOW_TEXT)
+      const nodes: Text[] = []
+      while (walker.nextNode()) nodes.push(walker.currentNode as Text)
+      for (const node of nodes) {
+        if (node.parentElement?.closest('pre, code, script, style, textarea')) continue
+        const pattern = /(?<!\\)\$\$([\s\S]+?)\$\$|(?<![\\$])\$([^$\n]+?)\$(?!\$)/g
+        const fragment = document.createDocumentFragment()
+        let last = 0
+        for (const match of node.data.matchAll(pattern)) {
+          const display = match[1] !== undefined
+          if (display ? !opts.enableMathBlockInHtml : !opts.enableMathInlineInHtml) continue
+          fragment.append(document.createTextNode(node.data.slice(last, match.index)))
+          const math = document.createElement('span')
+          try {
+            math.innerHTML = katex.renderToString((match[1] ?? match[2]).trim(), {
+              displayMode: display, output: 'html', throwOnError: opts.throwOnError,
+              errorColor: opts.errorColor, trust: false,
+            })
+          } catch {
+            math.className = 'katex-error'
+            math.textContent = match[0]
+          }
+          fragment.append(math)
+          last = match.index + match[0].length
+        }
+        if (last) {
+          fragment.append(document.createTextNode(node.data.slice(last)))
+          node.replaceWith(fragment)
+        }
       }
-    })
+      token.content = template.innerHTML
+    }
   })
 }
 
@@ -88,12 +131,14 @@ function escapeHtml(text: string): string {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
 }
 
 /* ---------------------------------------------------------------- *
  * PlantUML: deflate + the PlantUML text encoding, rendered through a
  * PlantUML server (opt-in plugin — enabling it sends the diagram
- * source to the configured server).
+ * source to the official server).
  * ---------------------------------------------------------------- */
 const PLANTUML_ALPHABET = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_'
 
@@ -122,76 +167,77 @@ function plantumlSvg(code: string): string {
  * includeLevel / containerClass / markerPattern / omitTag / listType
  * Builds a properly nested list (sub-lists live inside the parent li).
  * ---------------------------------------------------------------- */
-function tocPlugin(md: MarkdownIt, opts: MdPluginOptions['TOC']) {
-  const flag = opts.markerPattern.match(/\/([a-z]*)$/)?.[1] ?? 'im'
-  const marker = new RegExp(opts.markerPattern.replace(/^\/(.*)\/[a-z]*$/, '$1'), flag)
+export function slugify(content: string): string {
+  return content.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^\p{L}\p{N}_-]/gu, '') || 'section'
+}
 
-  md.core.ruler.push('md_reader_toc', tokenState => {
-    const tokens = tokenState.tokens
+export function uniqueHeadingId(base: string, used: Set<string>): string {
+  let id = base
+  let suffix = 1
+  while (used.has(id)) id = `${base}-${suffix++}`
+  used.add(id)
+  return id
+}
 
-    /* collect headings, skipping those right after the omit tag */
-    const headings: { level: number; content: string }[] = []
-    let omitNext = false
-    tokens.forEach((token, i) => {
-      if (token.type === 'html_block' && opts.omitTag && token.content.includes(opts.omitTag)) {
-        omitNext = true
-        return
-      }
+function headingIdsPlugin(md: MarkdownIt) {
+  md.core.ruler.push('markdang_heading_ids', state => {
+    const used = new Set<string>()
+    state.tokens.forEach((token, index) => {
       if (token.type === 'heading_open') {
-        const level = Number(token.tag.slice(1))
-        const inline = tokens[i + 1]
-        const content = (inline?.content ?? '').trim()
-        const omit = omitNext
-        omitNext = false
-        if (!omit && opts.includeLevel.includes(level) && content) {
-          headings.push({ level, content })
-        }
+        token.attrSet('id', uniqueHeadingId(slugify(state.tokens[index + 1]?.content ?? ''), used))
+        token.attrSet('data-markdang-heading', '')
       }
     })
-
-    /* find the marker paragraph and replace it with the toc list */
-    const index = tokens.findIndex(t => t.type === 'inline' && marker.test(t.content))
-    if (index === -1) return
-    if (tokens[index - 1]?.type !== 'paragraph_open' || tokens[index + 1]?.type !== 'paragraph_close') return
-
-    const seen = new Map<string, number>()
-    const idOf = (content: string) => {
-      const base = slugify(content)
-      const count = seen.get(base) ?? 0
-      seen.set(base, count + 1)
-      return count === 0 ? base : `${base}-${count}`
-    }
-
-    const tag = opts.listType
-    const minLevel = headings.length ? Math.min(...headings.map(h => h.level)) : 1
-    let html = `<div class="${opts.containerClass}">\n`
-    let depth = 0
-    headings.forEach(({ level, content }) => {
-      const d = Math.min(level - minLevel + 1, 6)
-      if (d > depth) {
-        /* the previous li stays open so the sub-list nests inside it */
-        html += `<${tag}>\n`.repeat(d - depth)
-        depth = d
-      } else if (d < depth) {
-        html += `</li>\n</${tag}>\n`.repeat(depth - d)
-        html += `</li>\n`
-        depth = d
-      } else {
-        html += `</li>\n`
-      }
-      html += `<li><a href="#${idOf(content)}">${md.utils.escapeHtml(content)}</a>`
-    })
-    html += `</li>\n</${tag}>\n`.repeat(depth)
-    html += `</div>`
-
-    const open = new tokenState.Token('html_block', '', 0)
-    open.content = html
-    tokens.splice(index - 1, 3, open)
   })
 }
 
-export function slugify(content: string): string {
-  return encodeURIComponent(content.trim().toLowerCase().replace(/\s+/g, '-'))
+function tocPlugin(md: MarkdownIt, opts: MdPluginOptions['TOC']) {
+  let marker: RegExp
+  try {
+    const literal = opts.markerPattern.match(/^\/([\s\S]*)\/([a-z]*)$/)
+    marker = literal ? new RegExp(literal[1], literal[2].replace(/[gy]/g, '')) : new RegExp(opts.markerPattern, 'im')
+  } catch {
+    marker = /^\[\[toc\]\]$/im
+  }
+
+  md.core.ruler.push('markdang_toc', state => {
+    type Heading = { level: number; content: string; id: string; children: Heading[] }
+    const roots: Heading[] = []
+    const stack: Heading[] = []
+    let omitNext = false
+    state.tokens.forEach((token, index) => {
+      if (token.type === 'html_block' && opts.omitTag && token.content.includes(opts.omitTag)) {
+        omitNext = true
+      }
+      if (token.type !== 'heading_open') return
+      const inline = state.tokens[index + 1]
+      const omitted = omitNext || (!!opts.omitTag && (inline?.content ?? '').includes(opts.omitTag))
+      omitNext = false
+      const level = Number(token.tag.slice(1))
+      if (omitted || !opts.includeLevel.includes(level)) return
+      const content = inline?.children?.map(child =>
+        ['text', 'code_inline', 'image', 'math_inline'].includes(child.type) ? child.content :
+          ['softbreak', 'hardbreak'].includes(child.type) ? ' ' : '',
+      ).join('') ?? inline?.content ?? ''
+      const heading: Heading = { level, content, id: token.attrGet('id') ?? '', children: [] }
+      while (stack.length && stack[stack.length - 1].level >= level) stack.pop()
+      ;(stack.at(-1)?.children ?? roots).push(heading)
+      stack.push(heading)
+    })
+    const list = (headings: Heading[]): string => headings.length
+      ? `<${opts.listType}>${headings.map(h =>
+          `<li><a href="#${encodeURIComponent(h.id)}">${md.utils.escapeHtml(h.content)}</a>${list(h.children)}</li>`,
+        ).join('')}</${opts.listType}>` : ''
+    const output = `<div class="${md.utils.escapeHtml(opts.containerClass)}">${list(roots)}</div>`
+    for (let index = state.tokens.length - 2; index >= 1; index--) {
+      const token = state.tokens[index]
+      if (token.type !== 'inline' || !marker.test(token.content.trim())) continue
+      if (state.tokens[index - 1].type !== 'paragraph_open' || state.tokens[index + 1].type !== 'paragraph_close') continue
+      const replacement = new state.Token('html_block', '', 0)
+      replacement.content = output
+      state.tokens.splice(index - 1, 3, replacement)
+    }
+  })
 }
 
 /* ---------------------------------------------------------------- *
@@ -211,7 +257,7 @@ function containerAlertPlugin(md: MarkdownIt, enabled: Record<string, boolean>) 
   Object.entries(ALERT_CONTAINER_COLORS).forEach(([name, color]) => {
     if (!enabled[name]) return
     md.use(containerPlugin, name, {
-      render(tokens: any[], idx: number) {
+      render(tokens: Token[], idx: number) {
         return tokens[idx].nesting === 1
           ? `<div class="markdang__alert markdang__alert--${color}"><p class="markdown-alert-title">${name}</p>\n`
           : '</div>\n'
@@ -224,36 +270,18 @@ function containerAlertPlugin(md: MarkdownIt, enabled: Record<string, boolean>) 
  * Front matter capture
  * ---------------------------------------------------------------- */
 function frontMatterPlugin(md: MarkdownIt) {
-  const handler = (content: string) => {
-    ;(md as any)[FRONT_MATTER_KEY] = content
-  }
-  /* same fence as markdown-it-front-matter uses */
-  md.block.ruler.before(
-    'blockquote',
-    'md_reader_front_matter',
-    (state, startLine, endLine, silent) => {
-      if (startLine !== 0 || silent) return false
-      const firstLine = state.src.slice(state.bMarks[startLine], state.eMarks[startLine])
-      if (!firstLine.trim().startsWith('---')) return false
-      for (let line = startLine + 1; line < endLine; line++) {
-        const lineText = state.src.slice(state.bMarks[line], state.eMarks[line])
-        if (/^(---|\.\.\.)\s*$/.test(lineText)) {
-          handler(state.src.slice(state.bMarks[1], state.bMarks[line]))
-          state.line = line + 1
-          return true
-        }
-      }
-      return false
-    },
-    { alt: [] },
-  )
-  md.frontMatter = handler
-}
-
-declare module 'markdown-it' {
-  interface MarkdownIt {
-    frontMatter?: (content: string) => void
-  }
+  md.block.ruler.before('blockquote', 'markdang_front_matter', (state, startLine, endLine, silent) => {
+    if (startLine !== 0 || state.blkIndent !== 0) return false
+    if (state.src.slice(state.bMarks[0], state.eMarks[0]).trim() !== '---') return false
+    for (let line = 1; line < endLine; line++) {
+      if (!/^(---|\.\.\.)\s*$/.test(state.src.slice(state.bMarks[line], state.eMarks[line]))) continue
+      if (silent) return true
+      ;(state.env as RenderEnv).frontMatter = state.src.slice(state.bMarks[1], state.bMarks[line])
+      state.line = line + 1
+      return true
+    }
+    return false
+  })
 }
 
 export function renderFrontMatterTable(raw: string): string {
@@ -263,7 +291,7 @@ export function renderFrontMatterTable(raw: string): string {
     .filter(Boolean) as RegExpMatchArray[]
   if (!rows.length) return ''
   const body = rows
-    .map(([, key, value]) => `<tr><td>${key.trim()}</td><td>${value.trim()}</td></tr>`)
+    .map(([, key, value]) => `<tr><td>${escapeHtml(key.trim())}</td><td>${escapeHtml(value.trim())}</td></tr>`)
     .join('\n')
   return `<table class="markdang__front-matter"><tbody>${body}</tbody></table>`
 }
@@ -277,26 +305,13 @@ export interface RenderResult {
   frontMatter: string | null
 }
 
-export function createRenderer(settings: Settings, dark: boolean) {
+export function createRenderer(settings: Settings) {
   const md: MarkdownIt = new MarkdownIt({
     html: true,
     breaks: settings.mdPlugins.includes('Breaks'),
     linkify: settings.mdPlugins.includes('Linkify'),
     typographer: settings.mdPlugins.includes('Typographer'),
-    highlight(code, language) {
-      if (language && hljs.getLanguage(language)) {
-        try {
-          return `<pre class="markdang__code-block"><code class="hljs" lang="${language}">${
-            hljs.highlight(code, { language, ignoreIllegals: true }).value
-          }</code><button class="markdang__btn markdang__btn--copy" title="Copy">${COPY_SVG}</button></pre>`
-        } catch {
-          /* fall through to plain */
-        }
-      }
-      return `<pre class="markdang__code-block"><code class="${language}">${md.utils.escapeHtml(
-        code,
-      )}</code><button class="markdang__btn markdang__btn--copy" title="Copy">${COPY_SVG}</button></pre>`
-    },
+
   })
 
   const options = settings.mdPluginOptions
@@ -312,7 +327,7 @@ export function createRenderer(settings: Settings, dark: boolean) {
   if (on('Deflist')) md.use(deflistPlugin)
   if (on('Footnote')) md.use(footnotePlugin)
   if (on('Katex')) {
-    md.use(katexPlugin, { output: 'html' })
+    md.use(katexPlugin, { output: 'html', throwOnError: options.Katex.throwOnError, errorColor: options.Katex.errorColor, trust: false })
     if (options.Katex.enableBareBlocks) bareMathPlugin(md)
     if (options.Katex.enableMathInlineInHtml || options.Katex.enableMathBlockInHtml) {
       htmlMathPlugin(md, options.Katex)
@@ -320,6 +335,7 @@ export function createRenderer(settings: Settings, dark: boolean) {
   }
   if (on('MultimdTable')) md.use(multimdTablePlugin, { ...options.MultimdTable })
   if (on('TaskLists')) md.use(tasklistsPlugin, { ...options.TaskLists })
+  md.use(headingIdsPlugin)
   if (on('TOC')) md.use(tocPlugin, options.TOC)
   if (on('Alert')) {
     /* blockquote alerts: @mdit/plugin-alert (alertNames/deep supported) */
@@ -361,6 +377,7 @@ export function createRenderer(settings: Settings, dark: boolean) {
           output: 'html',
           throwOnError: options.Katex.throwOnError,
           errorColor: options.Katex.errorColor,
+          trust: false,
         })}</p>`
       } catch (err) {
         return `<p class="katex-block katex-error">${md.utils.escapeHtml(token.content)}</p>`
@@ -371,25 +388,24 @@ export function createRenderer(settings: Settings, dark: boolean) {
     }
     if (language && hljs.getLanguage(language)) {
       try {
-        return `<pre class="markdang__code-block"><code class="hljs" lang="${language}">${
+        return `<pre class="markdang__code-block"><code class="hljs" lang="${md.utils.escapeHtml(language)}">${
           hljs.highlight(token.content, { language, ignoreIllegals: true }).value
-        }</code><button class="markdang__btn markdang__btn--copy" title="Copy">${COPY_SVG}</button></pre>`
+        }</code><button class="markdang__btn markdang__btn--copy" title="Copy" aria-label="Copy code" type="button">${COPY_SVG}</button></pre>`
       } catch {
         /* fall through to plain */
       }
     }
-    return `<pre class="markdang__code-block"><code class="${info}">${md.utils.escapeHtml(
+    return `<pre class="markdang__code-block"><code class="${md.utils.escapeHtml(info)}">${md.utils.escapeHtml(
       token.content,
-    )}</code><button class="markdang__btn markdang__btn--copy" title="Copy">${COPY_SVG}</button></pre>`
+    )}</code><button class="markdang__btn markdang__btn--copy" title="Copy" aria-label="Copy code" type="button">${COPY_SVG}</button></pre>`
   }
 
 
   const render = (source: string): RenderResult => {
     mermaidBlocks.length = 0
-    ;(md as any)[FRONT_MATTER_KEY] = null
-    const withoutFront = on('FrontMatter') ? source : source.replace(/^---[\s\S]+?---\n/, '')
-    let body = md.render(withoutFront)
-    const frontRaw = (md as any)[FRONT_MATTER_KEY] as string | null
+    const env: RenderEnv = {}
+    let body = md.render(source, env)
+    const frontRaw = env.frontMatter
     const frontHtml =
       on('FrontMatter') && frontRaw && options.FrontMatter.showMetadata
         ? renderFrontMatterTable(frontRaw)

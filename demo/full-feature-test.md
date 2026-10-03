@@ -6,7 +6,7 @@ version: 1.0
 
 # 全功能测试文档
 
-> 本页面覆盖所有插件与设置项。配合「设置」逐项开关，观察渲染变化。
+> 本页面演示 Markdown 插件及主要阅读选项。配合「设置」逐项开关，观察渲染变化。
 > 大纲（☰ tab）可测试折叠、展开全部/折叠全部、筛选。
 
 [[TOC]]
@@ -32,7 +32,7 @@ version: 1.0
 
 ## 自动识别链接（Linkify）
 
-- 普通文本链接：https://github.com/markdang/markdang
+- 普通文本链接：https://github.com/emorywang/markdang
 - 邮箱地址 someone@example.com（开启「模糊邮箱」后可点击）
 - IP 地址（模糊 IP 开启时可见）：192.168.1.100
 
@@ -200,7 +200,7 @@ Markdown
 ## PlantUML 图表（需网络）
 
 开启插件后，图表源码会发送到 PlantUML 官方服务器渲染为图片
-（可在使用中注意隐私；不开启该插件则完全离线）：
+（请勿在图表中包含敏感信息；文档引用的远程图片仍可能产生网络请求）：
 
 ```plantuml
 @startuml
@@ -286,7 +286,7 @@ const veryLongLine = "这是一段非常非常长的代码用于测试代码自�
 
 ## 图片
 
-![本地 Logo](../public/icons/logo.png)
+![本地 Logo](../public/icons/icon-128.png)
 
 ## 分隔线与引用
 

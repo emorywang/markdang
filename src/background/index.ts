@@ -1,139 +1,128 @@
-import type { DirEntry } from '../shared/ipc'
-
-/* ------------------------------------------------------------------ *
- * file:// directory & document access
- *
- * Content scripts cannot fetch `file:` URLs, so readers ask the
- * background to open the target in an inactive tab; the injected
- * script there either reports directory entries (dir pages) or
- * answers a raw-document query (md/txt pages), then the tab is
- * closed. Dir and doc probes are strictly separated: the tab-load
- * handler only queries documents, and entry reports only resolve
- * directory probes — they can never clobber each other.
- * ------------------------------------------------------------------ */
+import type { DirEntry, ProbeKind } from '../shared/ipc'
+import { isRecord, persistSettings } from '../shared/settings'
 
 const PROBE_TIMEOUT = 8000
-
-type ProbeKind = 'dir' | 'doc'
-
+type ProbeResult = DirEntry[] | string | null
 interface Probe {
+  key: string
   kind: ProbeKind
-  waiters: ((result: any) => void)[]
+  tabUrl: string
   tabId?: number
   timer?: ReturnType<typeof setTimeout>
+  waiters: ((result: ProbeResult) => void)[]
 }
-
-const dirCache = new Map<string, DirEntry[]>()
-const docCache = new Map<string, string | null>()
 const probes = new Map<string, Probe>()
 
-function settle(url: string, result: any) {
-  const probe = probes.get(url)
-  if (!probe) return
-  probe.waiters.forEach(wait => wait(result))
-  probes.delete(url)
-  if (probe.tabId !== undefined) chrome.tabs.remove(probe.tabId).catch(() => {})
+function closeTab(id: number) {
+  void chrome.tabs.remove(id).catch(() => {})
 }
 
-function requestViaTab<T>(url: string, kind: ProbeKind): Promise<T | null> {
-  if (!url.startsWith('file:')) return Promise.resolve(null)
-  const cache = kind === 'dir' ? dirCache : docCache
-  if (cache.has(url)) return Promise.resolve((cache.get(url) ?? null) as T | null)
+function settle(probe: Probe, result: ProbeResult) {
+  if (probes.get(probe.key) !== probe) return
+  clearTimeout(probe.timer)
+  probes.delete(probe.key)
+  for (const wait of probe.waiters) wait(result)
+  if (probe.tabId !== undefined) closeTab(probe.tabId)
+}
 
+function canonicalFileUrl(value: string): string | null {
+  try {
+    const url = new URL(value)
+    if (url.protocol !== 'file:') return null
+    url.hash = ''
+    return url.href
+  } catch {
+    return null
+  }
+}
+
+function authorizedUrl(value: unknown, sender: chrome.runtime.MessageSender, kind: ProbeKind): string | null {
+  if (typeof value !== 'string' || sender.frameId !== 0 || sender.tab?.id === undefined) return null
+  const source = canonicalFileUrl(sender.url ?? '')
+  const target = canonicalFileUrl(value)
+  if (!source || !target) return null
+  const expected = kind === 'dir' ? new URL('./', source).href : source
+  return target === expected ? target : null
+}
+
+function requestViaTab(url: string, kind: ProbeKind): Promise<ProbeResult> {
+  const key = `${kind}:${url}`
   return new Promise(resolve => {
-    const existing = probes.get(url)
+    const existing = probes.get(key)
     if (existing) {
-      if (existing.kind !== kind) return resolve(null) // conflicting probe in flight
       existing.waiters.push(resolve)
       return
     }
-    const probe: Probe = { kind, waiters: [resolve] }
-    probes.set(url, probe)
-    probe.timer = setTimeout(() => settle(url, cache.get(url) ?? null), PROBE_TIMEOUT)
-    chrome.tabs.create({ url, active: false }, tab => {
-      if (tab?.id === undefined) {
-        clearTimeout(probe.timer)
-        settle(url, null)
-        return
-      }
+    const tabUrl = new URL(url)
+    tabUrl.hash = `markdang-probe=${crypto.randomUUID()}`
+    const probe: Probe = { key, kind, tabUrl: tabUrl.href, waiters: [resolve] }
+    probes.set(key, probe)
+    probe.timer = setTimeout(() => settle(probe, null), PROBE_TIMEOUT)
+    void chrome.tabs.create({ url: probe.tabUrl, active: false }).then(tab => {
+      if (tab.id === undefined) return settle(probe, null)
+      if (probes.get(key) !== probe) return closeTab(tab.id)
       probe.tabId = tab.id
-    })
+    }).catch(() => settle(probe, null))
   })
 }
 
-chrome.runtime.onMessage.addListener(({ action, data }, _sender, callback) => {
-  switch (action) {
-    case 'listDir': {
-      const url: string = data?.url ?? ''
-      requestViaTab<DirEntry[]>(url, 'dir').then(callback)
-      return true
+function senderProbe(sender: chrome.runtime.MessageSender): Probe | undefined {
+  if (sender.frameId !== 0 || sender.tab?.id === undefined) return
+  for (const probe of probes.values()) {
+    if (probe.tabUrl === sender.url && (probe.tabId === undefined || probe.tabId === sender.tab.id)) {
+      probe.tabId = sender.tab.id
+      return probe
     }
-    case 'dirEntries': {
-      const url: string = data?.url ?? ''
-      const probe = probes.get(url)
-      /* only directory probes accept entry reports */
-      if (Array.isArray(data?.entries) && (!probe || probe.kind === 'dir')) {
-        dirCache.set(url, data.entries)
-        settle(url, data.entries)
-      }
-      callback?.(true)
-      return true
-    }
-    case 'docContent': {
-      const url: string = data?.url ?? ''
-      const probe = probes.get(url)
-      if (probe?.kind === 'doc' && typeof data?.text === 'string') {
-        docCache.set(url, data.text)
-        settle(url, data.text)
-      }
-      callback?.(true)
-      return true
-    }
-    case 'probeDoc': {
-      const url: string = data?.url ?? ''
-      requestViaTab<string | null>(url, 'doc').then(callback)
-      return true
-    }
-    default:
+  }
+}
+
+let settingsWrites: Promise<unknown> = Promise.resolve()
+chrome.runtime.onMessage.addListener((message: unknown, sender, callback) => {
+  if (!isRecord(message) || sender.id !== chrome.runtime.id) return false
+  const { action, data } = message
+  if (action === 'settingsPatch') {
+    const write = settingsWrites.then(() => persistSettings(data))
+    settingsWrites = write.catch(() => {})
+    void write.then(settings => callback({ settings }), error => callback({ error: String(error) }))
+    return true
+  }
+  if (action === 'probeStatus') {
+    callback(senderProbe(sender)?.kind ?? null)
+    return false
+  }
+  if (!isRecord(data)) return false
+  if (action === 'listDir' || action === 'probeDoc') {
+    const kind = action === 'listDir' ? 'dir' : 'doc'
+    const url = authorizedUrl(data.url, sender, kind)
+    if (!url) {
+      callback(null)
       return false
+    }
+    void requestViaTab(url, kind).then(callback)
+    return true
   }
+  const probe = senderProbe(sender)
+  if (action === 'docContent' && probe?.kind === 'doc' && typeof data.text === 'string') {
+    settle(probe, data.text)
+    callback(true)
+  } else if (action === 'dirEntries' && probe?.kind === 'dir' && Array.isArray(data.entries)) {
+    const entries = data.entries.filter((entry: unknown): entry is DirEntry =>
+      isRecord(entry) && typeof entry.name === 'string' && typeof entry.href === 'string' &&
+      typeof entry.isDir === 'boolean' && canonicalFileUrl(entry.href) !== null,
+    )
+    settle(probe, entries)
+    callback(true)
+  } else return false
+  return false
 })
 
-/* when a probed md/txt tab finishes loading, ask it for its raw source */
-chrome.tabs.onUpdated.addListener((tabId, info) => {
-  if (info.status !== 'complete') return
-  chrome.tabs
-    .get(tabId)
-    .then(tab => {
-      const url = tab.url ?? tab.pendingUrl
-      const probe = url ? probes.get(url) : undefined
-      if (!url || !probe || probe.kind !== 'doc' || probe.tabId !== tabId) return
-      chrome.tabs
-        .sendMessage(tabId, { action: 'getRawDoc' })
-        .then((res: any) => {
-          if (res && typeof res?.text === 'string') {
-            docCache.set(url, res.text)
-            settle(url, res.text)
-          }
-        })
-        .catch(() => {})
-    })
-    .catch(() => {})
+chrome.tabs.onRemoved.addListener(id => {
+  for (const probe of probes.values()) if (probe.tabId === id) settle(probe, null)
 })
 
-/* keyboard shortcuts */
-const CYCLE: string[] = ['light', 'dark', 'auto']
-
-chrome.commands.onCommand.addListener(async command => {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-  if (!tab?.id) return
-  const patch: Record<string, unknown> = {}
-  if (command === 'toggleSide') patch.sideCollapsed = 'toggle'
-  if (command === 'toggleCentered') patch.centered = 'toggle'
-  if (command === 'toggleRefresh') patch.refresh = 'toggle'
-  if (command === 'toggleTheme') {
-    const { pageTheme } = await chrome.storage.local.get('pageTheme')
-    patch.pageTheme = CYCLE[(CYCLE.indexOf((pageTheme as string) ?? 'auto') + 1) % CYCLE.length]
-  }
-  chrome.tabs.sendMessage(tab.id, { action: 'settingsToggle', data: patch }).catch(() => {})
+chrome.commands.onCommand.addListener(command => {
+  void chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
+    if (tab?.id === undefined) return
+    return chrome.tabs.sendMessage(tab.id, { action: 'command', command })
+  }).catch(() => {})
 })

@@ -1,15 +1,12 @@
 import { pathToFileURL } from 'node:url'
-import { chromium } from 'playwright-core'
-import { mkdtempSync } from 'node:fs'
-import os from 'node:os'
+import { launchExtension } from './browser.mjs'
 import path from 'node:path'
 import http from 'node:http'
 import { readFile } from 'node:fs/promises'
 
-const EDGE = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'
 const furl = p => pathToFileURL(path.resolve(p)).href
 const EXT = path.resolve('extension')
-const ROOT = path.resolve('..')
+const ROOT = path.resolve('.')
 const results = []
 const ok = (name, cond, extra = '') => {
   results.push({ name, pass: !!cond, extra })
@@ -18,51 +15,21 @@ const ok = (name, cond, extra = '') => {
 
 const server = http.createServer(async (req, res) => {
   try {
-    const file = path.join(ROOT, decodeURIComponent(req.url.split('?')[0]))
+    const pathname = new URL(req.url, 'http://localhost').pathname
+    const file = path.resolve(ROOT, '.' + decodeURIComponent(pathname))
+    if (!file.startsWith(ROOT + path.sep)) throw new Error('Invalid fixture path')
     const body = await readFile(file)
-    res.setHeader('content-type', req.url.endsWith('.txt') || req.url.endsWith('.md') ? 'text/plain' : 'text/html')
+    res.setHeader('content-type', /\.(txt|md)$/i.test(pathname) ? 'text/plain' : 'text/html')
     res.end(body)
   } catch {
     res.statusCode = 404
     res.end('nf')
   }
 })
-await new Promise(res => server.listen(8123, '127.0.0.1', res))
+await new Promise(res => server.listen(0, '127.0.0.1', res))
+const origin = `http://127.0.0.1:${server.address().port}`
 
-const context = await chromium.launchPersistentContext(mkdttd(), {
-  executablePath: EDGE,
-  headless: true,
-  args: ['--disable-extensions-except=' + EXT, '--load-extension=' + EXT, '--no-first-run'],
-})
-
-function mkdttd() {
-  return mkdtempSync(path.join(os.tmpdir(), 'mdg-next-'))
-}
-
-const extMgr = await context.newPage()
-await extMgr.goto('chrome://extensions')
-await extMgr.waitForLoadState('domcontentloaded')
-const extId = await extMgr.evaluate(
-  () =>
-    new Promise(res => {
-      chrome.developerPrivate.getExtensionsInfo(list =>
-        res(list.find(e => e.name.includes('MarkDang'))?.id),
-      )
-    }),
-)
-console.log('extension id:', extId)
-if (!extId) throw new Error('extension not loaded')
-
-const grant = await extMgr.evaluate(
-  id =>
-    new Promise(res => {
-      chrome.developerPrivate.updateExtensionConfiguration({ extensionId: id, fileAccess: true }, () =>
-        res(chrome.runtime.lastError?.message ?? 'granted'),
-      )
-    }),
-  extId,
-)
-console.log('file access:', grant)
+const { context: context, extId } = await launchExtension({ language: 'zh-CN' })
 
 const manifestText = await readFile(path.join(EXT, 'manifest.json'), 'utf8')
 const manifest = JSON.parse(manifestText)
@@ -81,7 +48,7 @@ const goto = async url => {
 const waitForReader = () => page.waitForSelector('.markdang-content', { timeout: 10000 }).catch(() => null)
 
 /* ---- 1. http md rendering ---- */
-await goto('http://127.0.0.1:8123/test-md/a.md')
+await goto(`${origin}/tests/fixtures/a.md`)
 await waitForReader()
 const content = await page.$('.markdang-content')
 ok('http: reader renders', !!content)
@@ -104,7 +71,7 @@ await setStorage({
   customCSS: '.markdang-content{letter-spacing:2px}',
   codeWrap: true,
 })
-await goto('http://127.0.0.1:8123/test-md/a.md')
+await goto(`${origin}/tests/fixtures/a.md`)
 await waitForReader()
 const c2 = await page.$('.markdang-content')
 if (c2) {
@@ -130,7 +97,7 @@ ok('popup: settings sections reachable', popupText.includes('通用') && popupTe
 
 /* code theme: dark page + light night theme -> light code background */
 await setStorage({ pageTheme: 'dark', codeBlockNightTheme: 'light' })
-await goto(furl('../test-md/a.md'))
+await goto(furl('tests/fixtures/a.md'))
 await waitForReader()
 const codeBg = await page.evaluate(() => {
   const pre = document.querySelector('.markdang__code-block')
@@ -155,7 +122,7 @@ await page.waitForTimeout(300)
 ok('options: plugin gear expands', (await page.$$('.plugin-options')).length > 0)
 
 /* ---- 4. file:// md render ---- */
-await goto(furl('../test-md/a.md'))
+await goto(furl('tests/fixtures/a.md'))
 await waitForReader()
 ok('file: reader renders', !!(await page.$('.markdang-content')))
 const bootState = await page.evaluate(() => ({
@@ -206,17 +173,17 @@ await page.click('.markdang__outline-list li:first-child .markdang__fold')
 ok('outline: unfold restores', (await page.$$eval('.markdang__outline-list li.fold-hidden', els => els.length)) === 0)
 
 /* ---- 7. txt as markdown ---- */
-await goto(furl('../test-md/notes.txt'))
+await goto(furl('tests/fixtures/notes.txt'))
 await waitForReader()
 ok('txt: rendered by default', !!(await page.$('.markdang-content')))
 await setStorage({ enableTxtExt: false })
-await goto(furl('../test-md/notes.txt'))
-await page.waitForLoadState('domcontentloaded').catch(() => {})
+await page.waitForFunction(() => !document.querySelector('.markdang') && !document.getElementById('markdang-boot-style'))
 ok('txt: not rendered when disabled', !(await page.$('.markdang-content')))
 await setStorage({ enableTxtExt: true })
+await page.waitForSelector('.markdang-content')
 
 /* ---- 8. directory view ---- */
-await goto(furl('../test-md/'))
+await goto(furl('tests/fixtures/'))
 await waitForReader()
 ok('dir: folder page rendered as browser view', !!(await page.$('.markdang__dir')))
 const dirItems = await page.$$eval('.markdang__dir-list li', els => els.length)
@@ -267,14 +234,15 @@ await setStorage({
 
 /* ---- 11. disabled ---- */
 await setStorage({ enable: false })
-await goto(furl('../test-md/a.md'))
+await page.waitForFunction(() => !document.querySelector('.markdang') && !document.getElementById('markdang-boot-style'))
+await goto(furl('tests/fixtures/a.md'))
 await page.waitForLoadState('domcontentloaded').catch(() => {})
 ok('disabled: no reader', !(await page.$('.markdang-content')))
 await setStorage({ enable: true })
+await page.waitForSelector('.markdang-content')
 
 await page.close()
 await storagePage.close()
-await extMgr.close()
 await context.close()
 server.close()
 

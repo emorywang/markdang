@@ -11,7 +11,10 @@
 - MarkDang / 码刻档 的**名称、Logo、图标、商标与品牌视觉**不随源码许可证授权，保留全部权利。
   The **name, logo, icons, trademarks, and brand visuals** of MarkDang / 码刻档 are **not** licensed under the code license; all rights are reserved.
 
-## Fork / 衍生版本必须 / Forks and derivative works must
+允许为识别官方版本、测试本仓库或提交贡献而展示仓库所附品牌资产；此项许可不授予衍生产品使用 MarkDang 品牌的权利。第三方字体不属于本项目专有品牌资产，依照各自许可证使用。
+The included brand assets may be displayed to identify official releases, test this repository, or contribute to it. This permission does not authorize branding a derivative product as MarkDang. Third-party fonts remain governed by their own licenses.
+
+## 对外发布的衍生产品 / Distributed derivative products
 
 1. **更换名称与视觉**：使用与 MarkDang / 码刻档 明显不同的产品名称、Logo 和图标，不得复用或模仿本项目的品牌视觉识别。
    **Rebrand**: use a product name, logo, and icons clearly distinct from MarkDang / 码刻档; do not reuse or imitate this project's brand identity.

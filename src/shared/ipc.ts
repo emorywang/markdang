@@ -1,3 +1,5 @@
+import type { DeepPartial, Settings } from './settings'
+
 export interface DirEntry {
   name: string
   href: string
@@ -6,32 +8,30 @@ export interface DirEntry {
   date?: string
 }
 
+export type ProbeKind = 'dir' | 'doc'
 export type IpcMap = {
-  /* content asks the background for a directory listing */
   listDir: { url: string }
-  /* a hidden directory tab reports its entries back */
-  dirEntries: { url: string; entries: DirEntry[] }
-  /* background probes a hidden md tab for its raw text (auto refresh) */
-  getRawDoc: Record<string, never>
-  getRawDocResult: { text: string | null }
-  /* content asks the background to re-probe its own document source */
+  dirEntries: { entries: DirEntry[] }
   probeDoc: { url: string }
-  /* content asks for re-fetch of its own document (auto refresh) */
-  fetchDoc: { url: string }
-  fetchDocResult: { text: string | null }
+  probeStatus: Record<string, never>
+  docContent: { text: string }
+  settingsPatch: DeepPartial<Settings>
 }
 
-export type IpcAction = keyof IpcMap
+type IpcResponses = {
+  listDir: DirEntry[]
+  dirEntries: boolean
+  probeDoc: string
+  probeStatus: ProbeKind
+  docContent: boolean
+  settingsPatch: { settings: Settings } | { error: string }
+}
 
-export function sendMessage<K extends IpcAction>(
-  action: K,
-  data: IpcMap[K],
-): Promise<any> {
+export function sendMessage<K extends keyof IpcMap>(action: K, data: IpcMap[K]): Promise<IpcResponses[K] | null> {
   return new Promise(resolve => {
     try {
-      chrome.runtime.sendMessage({ action, data }, res => {
-        void chrome.runtime.lastError
-        resolve(res)
+      chrome.runtime.sendMessage({ action, data }, response => {
+        resolve(chrome.runtime.lastError ? null : response ?? null)
       })
     } catch {
       resolve(null)

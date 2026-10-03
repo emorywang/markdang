@@ -1,36 +1,18 @@
-import fs from 'node:fs'
-import os from 'node:os'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { chromium } from 'playwright-core'
+import { launchExtension } from './browser.mjs'
 
-const mkdtempSync = p => fs.mkdtempSync(p)
 const furl = p => pathToFileURL(path.resolve(p)).href
-const EXT = path.resolve('extension')
 const results = []
 const ok = (name, cond, extra = '') => {
   results.push({ name, pass: !!cond })
   console.log(`${cond ? 'PASS' : 'FAIL'}  ${name}${extra ? ' | ' + extra : ''}`)
 }
 
-const ctx = await chromium.launchPersistentContext(mkdtempSync(path.join(os.tmpdir(), 'mdg-ux-')), {
-  executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-  headless: true,
-  args: ['--disable-extensions-except=' + EXT, '--load-extension=' + EXT, '--no-first-run'],
-})
-const mgr = await ctx.newPage()
-await mgr.goto('chrome://extensions')
-await mgr.waitForLoadState('domcontentloaded')
-const extId = await mgr.evaluate(
-  () => new Promise(res => chrome.developerPrivate.getExtensionsInfo(l => res(l.find(e => e.name.includes('MarkDang'))?.id))),
-)
-await mgr.evaluate(
-  id => new Promise(res => chrome.developerPrivate.updateExtensionConfiguration({ extensionId: id, fileAccess: true }, res)),
-  extId,
-)
+const { context: ctx, extId } = await launchExtension({ language: 'zh-CN' })
 
 const page = await ctx.newPage()
-await page.goto(furl('../test-md/a.md'))
+await page.goto(furl('tests/fixtures/a.md'))
 await page.waitForSelector('.markdang-content', { timeout: 10000 })
 
 const sideState = () =>
@@ -85,7 +67,7 @@ await uxStorage.goto(`chrome-extension://${extId}/src/popup/index.html`)
 const setStorage = data => uxStorage.evaluate(d => chrome.storage.local.set(d), data)
 let failures = 0
 for (let i = 0; i < 5; i++) {
-  await page.goto(furl('../test-md/a.md'))
+  await page.goto(furl('tests/fixtures/a.md'))
   await page.waitForSelector('.markdang-content', { timeout: 10000 })
   await page.click('.markdang__side-tab:first-child')
   await page.waitForSelector('.markdang__folder-list li a', { timeout: 8000 }).catch(() => null)
@@ -166,7 +148,7 @@ await page.click('.markdang__btn[title="原始内容"]')
 
 /* 9. dark mode button icons visible (stroke icons keep fill=none) */
 await setStorage({ pageTheme: 'dark' })
-await page.goto(furl('../test-md/a.md'))
+await page.goto(furl('tests/fixtures/a.md'))
 await page.waitForSelector('.markdang-content', { timeout: 10000 })
 const darkBtn = await page.evaluate(() => {
   const btn = document.querySelector('.markdang__btn[title="原始内容"]')
@@ -200,7 +182,6 @@ ok('ux: popup plugin cards uniform padding', insets.count >= 3 && insets.unique,
 
 await page.close()
 await uxStorage.close()
-await mgr.close()
 await ctx.close()
 
 const failed = results.filter(r => !r.pass)

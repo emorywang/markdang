@@ -39,7 +39,7 @@ export const READER_CSS = String.raw`
   --modal-bg: rgba(255, 255, 255, 0.75);
   background: var(--bg);
   color: var(--text);
-  font-family: var(--mdg-font, 'Manrope', 'Noto Sans SC', 'Segoe UI', 'Microsoft YaHei', sans-serif);
+  font-family: var(--mdg-font, 'Manrope', 'Noto Sans SC', 'Noto Sans CJK SC', 'PingFang SC', 'Segoe UI', 'Microsoft YaHei', sans-serif);
   font-size: var(--mdg-font-size, 16px);
   line-height: 1.75;
   -webkit-font-smoothing: antialiased;
@@ -75,14 +75,12 @@ export const READER_CSS = String.raw`
   display: none;
 }
 .markdang-content {
-  max-width: var(--mdg-max-width, none);
+  max-width: var(--mdg-width, 1000px);
   margin: 0 auto;
   padding: 40px 56px 80px;
   outline: none;
 }
-.markdang-centered .markdang-content {
-  max-width: var(--mdg-width, 1000px);
-}
+.markdang:not(.markdang-centered) .markdang-content { margin-inline-start: 0; }
 .markdang-content > *:first-child { margin-top: 0 !important; }
 .markdang-content h1, .markdang-content h2, .markdang-content h3,
 .markdang-content h4, .markdang-content h5, .markdang-content h6 {
@@ -127,6 +125,8 @@ export const READER_CSS = String.raw`
 .markdang-content blockquote > :first-child { margin-top: 0; }
 .markdang-content blockquote > :last-child { margin-bottom: 0; }
 
+.markdang button:focus-visible, .markdang a:focus-visible, .markdang [role="button"]:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
 /* toc container ([[TOC]]) */
 .markdang-content .table-of-contents {
   background: var(--panel-bg);
@@ -147,34 +147,18 @@ export const READER_CSS = String.raw`
 .markdang-content .table-of-contents a:hover { color: var(--primary); }
 .markdang-content ul, .markdang-content ol { padding-inline-start: 1.6em; }
 .markdang-content li { margin: 0.3em 0; }
-.markdang-content ul.contains-task-list { padding-inline-start: 1.2em; }
+.markdang-content .contains-task-list { padding-inline-start: 1.2em; }
 .markdang-content li.task-list-item { list-style: none; }
-.markdang-content li.task-list-item {
-  display: flex;
-  align-items: baseline;
-}
-/* TaskLists label semantics:
-   - default (labelAfter=false): checkbox first, text after — in wrap mode
-     the <label> contains checkbox+text, so keep DOM order
-   - 「将文字显示在复选框之前」 on: text first, checkbox last in both modes */
-body.task-label-after .markdang-content li.task-list-item .task-list-item-checkbox { order: 2; }
-body.task-label-after .markdang-content li.task-list-item .task-list-item-label { order: 1; }
-body.task-label-on:not(.task-label-after) .markdang-content li.task-list-item label {
-  display: inline-flex;
-  align-items: baseline;
-}
-body.task-label-on:not(.task-label-after) .markdang-content li.task-list-item label .task-list-item-checkbox { order: 2; }
 .markdang-content li.task-list-item .task-list-item-checkbox {
-  flex: none;
   margin-inline-end: 0.45em;
-  accent-color: var(--color-primary);
+  accent-color: var(--primary);
   vertical-align: -1px;
 }
 .markdang-content li.task-list-item.enabled .task-list-item-checkbox { cursor: pointer; }
 .markdang-content li.task-list-item.enabled label { cursor: pointer; }
 .markdang-content .markdang__caption-anchor {
   margin-inline-end: 6px;
-  color: var(--color-primary);
+  color: var(--primary);
   text-decoration: none;
   opacity: 0.55;
 }
@@ -266,33 +250,33 @@ body.task-label-on:not(.task-label-after) .markdang-content li.task-list-item la
   margin: 0 0 0.2em;
   font-size: 0.92em;
 }
-.markdang-content .markdown-alert--important,
+.markdang-content .markdown-alert-important,
 .markdang-content .markdang__alert--important { border-inline-start-color: #a371f7; }
-.markdang-content .markdown-alert--note,
-.markdang-content .markdown-alert--info,
+.markdang-content .markdown-alert-note,
+.markdang-content .markdown-alert-info,
 .markdang-content .markdang__alert--info { border-inline-start-color: #539bf5; }
-.markdang-content .markdown-alert--tip,
-.markdang-content .markdown-alert--success,
+.markdang-content .markdown-alert-tip,
+.markdang-content .markdown-alert-success,
 .markdang-content .markdang__alert--tip,
 .markdang-content .markdang__alert--success { border-inline-start-color: #57ab5a; }
-.markdang-content .markdown-alert--warning,
+.markdang-content .markdown-alert-warning,
 .markdang-content .markdang__alert--warning { border-inline-start-color: #c69026; }
-.markdang-content .markdown-alert--caution,
-.markdang-content .markdown-alert--danger,
+.markdang-content .markdown-alert-caution,
+.markdang-content .markdown-alert-danger,
 .markdang-content .markdang__alert--danger { border-inline-start-color: #e5534b; }
-.markdang-content .markdown-alert--important .markdown-alert-title,
+.markdang-content .markdown-alert-important .markdown-alert-title,
 .markdang-content .markdang__alert--important .md-alert-title { color: #a371f7; }
-.markdang-content .markdown-alert--note .markdown-alert-title,
-.markdang-content .markdown-alert--info .markdown-alert-title,
+.markdang-content .markdown-alert-note .markdown-alert-title,
+.markdang-content .markdown-alert-info .markdown-alert-title,
 .markdang-content .markdang__alert--info .md-alert-title { color: #539bf5; }
-.markdang-content .markdown-alert--tip .markdown-alert-title,
-.markdang-content .markdown-alert--success .markdown-alert-title,
+.markdang-content .markdown-alert-tip .markdown-alert-title,
+.markdang-content .markdown-alert-success .markdown-alert-title,
 .markdang-content .markdang__alert--tip .md-alert-title,
 .markdang-content .markdang__alert--success .md-alert-title { color: #57ab5a; }
-.markdang-content .markdown-alert--warning .markdown-alert-title,
+.markdang-content .markdown-alert-warning .markdown-alert-title,
 .markdang-content .markdang__alert--warning .md-alert-title { color: #c69026; }
-.markdang-content .markdown-alert--caution .markdown-alert-title,
-.markdang-content .markdown-alert--danger .markdown-alert-title,
+.markdang-content .markdown-alert-caution .markdown-alert-title,
+.markdang-content .markdown-alert-danger .markdown-alert-title,
 .markdang-content .markdang__alert--danger .md-alert-title { color: #e5534b; }
 
 /* raw toggle — the hidden host <pre> is a body child, so the state class
@@ -398,7 +382,7 @@ body.task-label-on:not(.task-label-after) .markdang-content li.task-list-item la
   display: flex;
   flex-direction: column;
   transition: transform 0.25s ease;
-  font-size: 13.5px;
+  font-size: 15px;
 }
 .markdang-side-collapsed .markdang__side {
   transform: translateX(-100%);
@@ -437,7 +421,7 @@ body.task-label-on:not(.task-label-after) .markdang-content li.task-list-item la
   border-radius: 7px;
   background: transparent;
   color: var(--text);
-  font-size: 0.88em;
+  font-size: 0.95em;
   text-align: start;
   cursor: pointer;
 }
@@ -494,7 +478,7 @@ body.task-label-on:not(.task-label-after) .markdang-content li.task-list-item la
   border-radius: 8px;
   color: var(--muted);
   text-decoration: none;
-  font-size: 0.92em;
+  font-size: 1em;
   line-height: 1.4;
   margin-left: calc(10px + var(--mdg-indent, 0) * 12px);
   overflow: hidden;
@@ -626,7 +610,7 @@ body.task-label-on:not(.task-label-after) .markdang-content li.task-list-item la
 
 /* zen mode */
 .markdang-zen .markdang__side,
-.markdang-zen .markdang__button-wrap {
+.markdang-zen .markdang__button-wrap > .markdang__btn:not(.markdang__btn--exit-zen) {
   display: none !important;
 }
 .markdang-zen .markdang-layout { padding: 0 !important; }
