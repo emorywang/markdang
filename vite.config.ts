@@ -95,6 +95,6 @@ const mermaid = defineConfig({
 })
 
 const targets = { pages, content, background, boot, mermaid }
-const target = process.env.MDR_TARGET ?? 'pages'
+const target = process.env.MARKDANG_TARGET ?? 'pages'
 if (!(target in targets)) throw new Error(`Unknown build target: ${target}`)
 export default targets[target as keyof typeof targets]

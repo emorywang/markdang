@@ -60,7 +60,7 @@ function tasklistsPlugin(md: MarkdownIt, opts: MdPluginOptions['TaskLists']) {
  * (the @traptitech katex plugin does not implement this option)
  * ---------------------------------------------------------------- */
 function bareMathPlugin(md: MarkdownIt) {
-  md.block.ruler.before('fence', 'md_reader_bare_math', (state, startLine, endLine, silent) => {
+  md.block.ruler.before('fence', 'markdang_bare_math', (state, startLine, endLine, silent) => {
     const firstLine = state.src.slice(state.bMarks[startLine], state.eMarks[startLine])
     const match = firstLine.match(/^\s*\\begin\{([a-zA-Z*]+)\}/)
     if (!match) return false
@@ -86,7 +86,7 @@ function bareMathPlugin(md: MarkdownIt) {
  * math inside raw html tokens ($..$ inline, $$..$$ block)
  * ---------------------------------------------------------------- */
 function htmlMathPlugin(md: MarkdownIt, opts: MdPluginOptions['Katex']) {
-  md.core.ruler.push('md_reader_html_math', state => {
+  md.core.ruler.push('markdang_html_math', state => {
     for (const token of state.tokens) {
       if (token.type !== 'html_block') continue
       const template = document.createElement('template')
@@ -200,7 +200,7 @@ function tocPlugin(md: MarkdownIt, opts: MdPluginOptions['TOC']) {
     marker = /^\[\[toc\]\]$/im
   }
 
-  md.core.ruler.push('md_reader_toc', state => {
+  md.core.ruler.push('markdang_toc', state => {
     type Heading = { level: number; content: string; id: string; children: Heading[] }
     const roots: Heading[] = []
     const stack: Heading[] = []
@@ -270,7 +270,7 @@ function containerAlertPlugin(md: MarkdownIt, enabled: Record<string, boolean>) 
  * Front matter capture
  * ---------------------------------------------------------------- */
 function frontMatterPlugin(md: MarkdownIt) {
-  md.block.ruler.before('blockquote', 'md_reader_front_matter', (state, startLine, endLine, silent) => {
+  md.block.ruler.before('blockquote', 'markdang_front_matter', (state, startLine, endLine, silent) => {
     if (startLine !== 0 || state.blkIndent !== 0) return false
     if (state.src.slice(state.bMarks[0], state.eMarks[0]).trim() !== '---') return false
     for (let line = 1; line < endLine; line++) {

@@ -12,6 +12,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Support links in About and README: Ko-fi in English; Afdian and Ko-fi in Chinese.
 - Complete Chinese counterparts for settings, development, architecture, publishing, privacy, security, contribution, and changelog documentation.
 - Privacy policy, store-publishing checklist, and language regression checks.
+- Reproducible 1280 × 800 store screenshots, bilingual store form text, reviewer sample, and source/asset provenance review.
 
 ### Fixed
 

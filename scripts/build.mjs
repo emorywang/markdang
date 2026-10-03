@@ -15,7 +15,7 @@ function build() {
   fs.rmSync(path.join(root, 'extension'), { recursive: true, force: true })
   for (const target of passes) {
     const result = spawnSync(process.execPath, [vite, 'build', '--mode', target], {
-      cwd: root, stdio: 'inherit', env: { ...process.env, MDR_TARGET: target },
+      cwd: root, stdio: 'inherit', env: { ...process.env, MARKDANG_TARGET: target },
     })
     if (result.error) throw result.error
     if (result.status !== 0) throw new Error(`Build failed: ${target} (exit ${result.status})`)

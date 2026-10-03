@@ -15,7 +15,7 @@
     var loading = document.createElement('div');
     loading.id = 'markdang-boot-loading';
     loading.innerHTML =
-      '<style>#markdang-boot-loading{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:9999;pointer-events:none}#markdang-boot-loading.show{display:flex}#markdang-boot-loading .mdg-dot{width:11px;height:11px;border-radius:50%;background:#4f46e5;animation:mdrBootPulse 1s ease-in-out infinite}@keyframes mdrBootPulse{0%,100%{transform:scale(.55);opacity:.35}50%{transform:scale(1);opacity:1}}</style><div class="mdg-dot"></div>';
+      '<style>#markdang-boot-loading{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:9999;pointer-events:none}#markdang-boot-loading.show{display:flex}#markdang-boot-loading .mdg-dot{width:11px;height:11px;border-radius:50%;background:#4f46e5;animation:mdgBootPulse 1s ease-in-out infinite}@keyframes mdgBootPulse{0%,100%{transform:scale(.55);opacity:.35}50%{transform:scale(1);opacity:1}}</style><div class="mdg-dot"></div>';
     (document.body || document.documentElement).appendChild(loading);
 
     var done = false;

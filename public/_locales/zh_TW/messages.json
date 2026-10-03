@@ -1,7 +1,7 @@
 {
-  "description": { "message": "码刻档 —— 在浏览器中舒适阅读 Markdown。无账号、无订阅、无遥测。" },
-  "toggleSide": { "message": "切换侧边栏" },
-  "toggleCentered": { "message": "切换居中" },
-  "toggleRefresh": { "message": "切换自动刷新" },
-  "toggleTheme": { "message": "切换页面主题" }
+  "description": { "message": "碼刻檔 —— 在瀏覽器中舒適閱讀 Markdown。無帳號、無訂閱、無遙測。" },
+  "toggleSide": { "message": "切換側邊欄" },
+  "toggleCentered": { "message": "切換置中" },
+  "toggleRefresh": { "message": "切換自動重新整理" },
+  "toggleTheme": { "message": "切換頁面主題" }
 }
