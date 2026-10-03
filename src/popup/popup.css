@@ -1,5 +1,1 @@
 body { width: 400px; height: 600px; margin: 0; overflow: hidden; }
-.popup-mode .rail { flex-wrap: wrap; }
-.popup-mode .brand { padding-right: 0; }
-.popup-mode .rail-nav button { padding: 5px 9px; }
-.popup-mode .rail-open { margin-left: 0; }

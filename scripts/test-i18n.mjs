@@ -33,6 +33,21 @@ try {
   await popup.setViewportSize({ width: 400, height: 600 })
   await popup.goto(`chrome-extension://${extId}/src/popup/index.html`)
   await popup.waitForSelector('.popup-mode')
+  await popup.evaluate(async () => { await document.fonts.ready })
+  const navigationFits = () => popup.evaluate(() => {
+    const boxes = [...document.querySelectorAll('.rail .brand-logo, .rail button')].map(element => element.getBoundingClientRect())
+    const centers = boxes.map(box => box.top + box.height / 2)
+    return document.documentElement.scrollWidth <= innerWidth
+      && boxes.every(box => box.left >= 0 && box.right <= innerWidth && box.top >= 0)
+      && Math.max(...centers) - Math.min(...centers) < 1
+      && [...document.querySelectorAll('.rail button')].every(button => button.scrollWidth <= button.clientWidth)
+  })
+  const aboutFits = () => popup.evaluate(() => {
+    const card = document.querySelector('.about').getBoundingClientRect()
+    const content = document.querySelector('main')
+    return card.top >= content.getBoundingClientRect().top
+      && card.bottom <= innerHeight - Number.parseFloat(getComputedStyle(content).paddingBottom)
+  })
   const file = path.join(temp, 'document.md')
   await fs.writeFile(file, '# Heading\n\n## Child\n\n- [ ] Keep state\n\n```js\nconst value = 1\n```\n')
   await options.evaluate(() => chrome.runtime.sendMessage({ action: 'settingsPatch', data: { mdPluginOptions: { TaskLists: { enabled: true } } } }))
@@ -52,6 +67,12 @@ try {
   ok('reader controls and search prompts update live', await reader.getByRole('button', { name: '原始内容', exact: true }).isVisible() && await reader.locator('input[placeholder="筛选标题"]').count() === 1)
   ok('switching language preserves document nodes and checked tasks', await reader.evaluate(() => window.markdangContentSnapshot === document.querySelector('.markdang-content').firstElementChild && document.querySelector('.task-list-item input').checked))
   ok('switching language preserves outline folds and updates their accessible labels', await reader.locator('.markdang__outline-list li').first().evaluate(li => li.classList.contains('folded')) && await reader.getByRole('button', { name: '折叠/展开 Heading', exact: true }).count() === 1)
+  ok('the full-settings icon has a Chinese accessible name', await popup.getByRole('button', { name: '在独立页面打开设置', exact: true }).isVisible())
+  for (const section of ['通用', '外观', '插件', '关于']) {
+    await popup.getByRole('button', { name: section, exact: true }).click()
+    ok(`Chinese popup ${section} keeps navigation on one row without clipping`, await navigationFits())
+  }
+  ok('Chinese About fits the 400 × 600 popup without scrolling', await aboutFits())
 
   await options.getByRole('button', { name: '关于', exact: true }).click()
   const chineseSupport = await options.locator('.support a').evaluateAll(links => links.map(a => ({ href: a.href, rel: a.rel, target: a.target })))
@@ -73,14 +94,12 @@ try {
   }
 
   ok('settings and reader sidebars use larger, independent text', await options.locator('.rail-nav button').first().evaluate(b => Number.parseFloat(getComputedStyle(b).fontSize) >= 15) && await reader.locator('.markdang__outline-list a').first().evaluate(a => Number.parseFloat(getComputedStyle(a).fontSize) >= 15))
-  const fits = () => popup.evaluate(() => {
-    const width = innerWidth
-    return document.documentElement.scrollWidth <= width && [...document.querySelectorAll('.rail button')].every(b => b.getBoundingClientRect().right <= width)
-  })
+  ok('the full-settings icon has an English accessible name', await popup.getByRole('button', { name: 'Open settings in a separate tab', exact: true }).isVisible())
   for (const section of ['General', 'Appearance', 'Plugins', 'About']) {
     await popup.getByRole('button', { name: section, exact: true }).click()
-    ok(`English popup ${section} fits within 400 px`, await fits())
+    ok(`English popup ${section} keeps navigation on one row without clipping`, await navigationFits())
   }
+  ok('English About fits the 400 × 600 popup without scrolling', await aboutFits())
   ok('popup menu text is at least 14 px', await popup.locator('.rail-nav button').first().evaluate(b => Number.parseFloat(getComputedStyle(b).fontSize) >= 14))
 
   await popup.close()

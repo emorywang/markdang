@@ -27,7 +27,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Keep PlantUML separate from the bulk local-plugin switch; show its network disclosure and actual local-file permission status.
 - Replace the inactive language selector with working localization; remove the inactive character-set control and duplicate popup CSS.
-- Increase sidebar/menu text, simplify About, and keep English controls within the popup width.
+- Increase sidebar/menu text; keep popup navigation on one row with an accessible full-settings icon.
+- Refine bilingual About copy with reading features, local settings, and the absence of accounts, subscriptions, and telemetry.
 - Update reader labels in place when the language changes, preserving task state and outline folds.
 - Use a supported Vite 7 build, clean output, real build watching, version checks, and release license notices.
 - Package formula fonts as local WOFF2 resources loaded on demand, reducing the reader script and release size.

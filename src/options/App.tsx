@@ -147,8 +147,11 @@ export function App({ variant = 'page' }: { variant?: 'page' | 'popup' } = {}) {
             ))}
           </nav>
           {variant === 'popup' && (
-            <button class="rail-open" title={t('openOptions')} onClick={() => chrome.runtime.openOptionsPage()}>
-              ↗ {t('openTab')}
+            <button class="rail-open" type="button" title={t('openOptions')} aria-label={t('openOptions')} onClick={() => chrome.runtime.openOptionsPage()}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M14 3h7v7M21 3l-9 9" />
+                <path d="M10 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5" />
+              </svg>
             </button>
           )}
         </aside>
@@ -421,6 +424,7 @@ export function App({ variant = 'page' }: { variant?: 'page' | 'popup' } = {}) {
                   <b>MarkDang / 码刻档 {chrome.runtime.getManifest().version}</b>
                 </p>
                 <p>{t('aboutDesc')}</p>
+                <p class="about-privacy">{t('aboutPrivacy')}</p>
                 <p><a href="https://github.com/emorywang/markdang" target="_blank" rel="noopener noreferrer">{t('projectHome')}</a> · <a href={`https://github.com/emorywang/markdang/blob/main/PRIVACY${locale === 'zh-CN' ? '.zh-CN' : ''}.md`} target="_blank" rel="noopener noreferrer">{t('privacy')}</a></p>
                 <div class="support">
                   <p>{t('supportText')}</p>
