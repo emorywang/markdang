@@ -39,7 +39,7 @@ export const READER_CSS = String.raw`
   --modal-bg: rgba(255, 255, 255, 0.75);
   background: var(--bg);
   color: var(--text);
-  font-family: var(--mdg-font, 'Manrope', 'Noto Sans SC', 'Segoe UI', 'Microsoft YaHei', sans-serif);
+  font-family: var(--mdg-font, 'Manrope', 'Noto Sans SC', 'Noto Sans CJK SC', 'PingFang SC', 'Segoe UI', 'Microsoft YaHei', sans-serif);
   font-size: var(--mdg-font-size, 16px);
   line-height: 1.75;
   -webkit-font-smoothing: antialiased;

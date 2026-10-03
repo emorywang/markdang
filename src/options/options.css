@@ -28,7 +28,7 @@
   --danger: #b34148;
   --track: #c8d4e8;
   --shadow: 0 1px 2px rgba(30, 48, 90, 0.05);
-  font-family: 'Manrope', 'Noto Sans SC', 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  font-family: 'Manrope', 'Noto Sans SC', 'Noto Sans CJK SC', 'PingFang SC', 'Segoe UI', 'Microsoft YaHei', sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root {

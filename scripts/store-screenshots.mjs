@@ -8,7 +8,7 @@ import { launchExtension } from './browser.mjs'
 const output = path.resolve('artifacts/store-screenshots')
 const samples = {
   en: {
-    appearance: 'Appearance', math: 'Math and diagrams',
+    appearance: 'Appearance', checklist: 'Review checklist',
     document: `# Project notes
 
 A few notes, code snippets, and a checklist kept beside the project.
@@ -58,7 +58,7 @@ Use the outline to move between sections. Change the theme and text size to suit
 `,
   },
   'zh-CN': {
-    appearance: '外观', math: '公式与图表',
+    appearance: '外观', checklist: '检查清单',
     document: `# 项目笔记
 
 把说明、代码片段和检查清单放在项目旁边，查阅时更方便。
@@ -139,7 +139,7 @@ for (const [locale, sample] of Object.entries(samples)) {
     await page.waitForSelector('.markdang-content')
     await page.waitForSelector('pre.markdang__mermaid svg')
     await capture(page, '01-reading-light')
-    await page.locator('.markdang-content h2').filter({ hasText: sample.math }).scrollIntoViewIfNeeded()
+    await page.locator('.markdang-content h2').filter({ hasText: sample.checklist }).evaluate(heading => heading.scrollIntoView({ block: 'start', behavior: 'instant' }))
     await capture(page, '02-math-diagrams')
     await options.evaluate(() => chrome.runtime.sendMessage({ action: 'settingsPatch', data: { pageTheme: 'dark' } }))
     await page.waitForFunction(() => document.querySelector('.markdang')?.getAttribute('data-theme') === 'dark')
