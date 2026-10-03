@@ -42,12 +42,26 @@ try {
       && Math.max(...centers) - Math.min(...centers) < 1
       && [...document.querySelectorAll('.rail button')].every(button => button.scrollWidth <= button.clientWidth)
   })
-  const aboutFits = () => popup.evaluate(() => {
-    const card = document.querySelector('.about').getBoundingClientRect()
-    const content = document.querySelector('main')
-    return card.top >= content.getBoundingClientRect().top
-      && card.bottom <= innerHeight - Number.parseFloat(getComputedStyle(content).paddingBottom)
-  })
+  const aboutFits = async () => {
+    const layout = await popup.evaluate(() => {
+      const card = document.querySelector('.about').getBoundingClientRect()
+      const content = document.querySelector('main')
+      return { top: card.top, bottom: card.bottom, contentTop: content.getBoundingClientRect().top, limit: innerHeight - Number.parseFloat(getComputedStyle(content).paddingBottom) }
+    })
+    const fits = layout.top >= layout.contentTop && layout.bottom <= layout.limit
+    if (!fits) console.error('About layout:', JSON.stringify(layout))
+    return fits
+  }
+  const previews = path.resolve('artifacts', 'popup')
+  await fs.mkdir(previews, { recursive: true })
+  const saveAboutPreviews = async locale => {
+    for (const scheme of ['light', 'dark']) {
+      await popup.emulateMedia({ colorScheme: scheme })
+      await popup.screenshot({ path: path.join(previews, `about-${locale}-${scheme}.png`), animations: 'disabled' })
+      ok(`${locale} About in ${scheme} mode fits the 400 × 600 popup without clipping or scrolling`, await aboutFits() && await navigationFits())
+    }
+    await popup.emulateMedia({ colorScheme: 'light' })
+  }
   const file = path.join(temp, 'document.md')
   await fs.writeFile(file, '# Heading\n\n## Child\n\n- [ ] Keep state\n\n```js\nconst value = 1\n```\n')
   await options.evaluate(() => chrome.runtime.sendMessage({ action: 'settingsPatch', data: { mdPluginOptions: { TaskLists: { enabled: true } } } }))
@@ -72,7 +86,7 @@ try {
     await popup.getByRole('button', { name: section, exact: true }).click()
     ok(`Chinese popup ${section} keeps navigation on one row without clipping`, await navigationFits())
   }
-  ok('Chinese About fits the 400 × 600 popup without scrolling', await aboutFits())
+  await saveAboutPreviews('zh-CN')
 
   await options.getByRole('button', { name: '关于', exact: true }).click()
   const chineseSupport = await options.locator('.support a').evaluateAll(links => links.map(a => ({ href: a.href, rel: a.rel, target: a.target })))
@@ -99,7 +113,7 @@ try {
     await popup.getByRole('button', { name: section, exact: true }).click()
     ok(`English popup ${section} keeps navigation on one row without clipping`, await navigationFits())
   }
-  ok('English About fits the 400 × 600 popup without scrolling', await aboutFits())
+  await saveAboutPreviews('en')
   ok('popup menu text is at least 14 px', await popup.locator('.rail-nav button').first().evaluate(b => Number.parseFloat(getComputedStyle(b).fontSize) >= 14))
 
   await popup.close()
