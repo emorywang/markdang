@@ -15,6 +15,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Use the existing light-text About logo on dark backgrounds.
 - Refresh local files without returning cached source; identify probe tabs explicitly and clear completed probe timers.
 - Serialize settings writes, merge nested preferences, validate stored values, and retain rapid UI changes.
 - Sanitize Markdown HTML and Mermaid SVG; enforce Mermaid strict security and escape metadata, attributes, and error messages.

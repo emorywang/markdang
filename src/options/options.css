@@ -300,6 +300,7 @@ h1 { font-size: 21px; margin: 0 0 16px; letter-spacing: -0.01em; }
 
 /* about */
 .about { background: var(--card); border-radius: 14px; box-shadow: var(--shadow); padding: 18px 22px; line-height: 1.7; font-size: 14px; }
+.about-brand { display: block; }
 .about-logo { display: block; height: 64px; width: auto; margin: 8px auto 16px; }
 .about p { margin: 0 0 10px; }
 .about p:last-child { margin-bottom: 0; }

@@ -57,7 +57,13 @@ try {
   const saveAboutPreviews = async locale => {
     for (const scheme of ['light', 'dark']) {
       await popup.emulateMedia({ colorScheme: scheme })
+      const logoName = `markdang-horizontal-bilingual-${scheme === 'dark' ? 'dark' : 'primary'}.svg`
+      await popup.waitForFunction(name => {
+        const image = document.querySelector('.about-logo')
+        return image?.complete && image.naturalWidth > 0 && image.currentSrc.endsWith(name)
+      }, logoName)
       await popup.screenshot({ path: path.join(previews, `about-${locale}-${scheme}.png`), animations: 'disabled' })
+      ok(`${locale} About uses the matching ${scheme} logo`, (await popup.locator('.about-logo').evaluate(image => image.currentSrc)).endsWith(logoName))
       ok(`${locale} About in ${scheme} mode fits the 400 × 600 popup without clipping or scrolling`, await aboutFits() && await navigationFits())
     }
     await popup.emulateMedia({ colorScheme: 'light' })

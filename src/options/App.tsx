@@ -419,7 +419,10 @@ export function App({ variant = 'page' }: { variant?: 'page' | 'popup' } = {}) {
             <>
               <h1>{t('about')}</h1>
               <div class="about">
-                <img class="about-logo" src="/brand/markdang-horizontal-bilingual-primary.svg" alt="MarkDang / 码刻档" />
+                <picture class="about-brand">
+                  <source media="(prefers-color-scheme: dark)" srcSet="/brand/markdang-horizontal-bilingual-dark.svg" />
+                  <img class="about-logo" src="/brand/markdang-horizontal-bilingual-primary.svg" alt="MarkDang / 码刻档" />
+                </picture>
                 <p>
                   <b>MarkDang / 码刻档 {chrome.runtime.getManifest().version}</b>
                 </p>
