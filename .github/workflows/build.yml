@@ -29,7 +29,13 @@ jobs:
       - name: Install browser
         run: npx playwright-core install --with-deps chromium
       - name: Install Chinese screenshot fonts
-        run: sudo apt-get install -y fonts-noto-cjk
+        run: |
+          markdang_font_dir="$HOME/.local/share/fonts/markdang"
+          mkdir -p "$markdang_font_dir"
+          curl --fail --location --retry 2 --connect-timeout 15 --max-time 60 \
+            https://raw.githubusercontent.com/notofonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf \
+            --output "$markdang_font_dir/NotoSansCJKsc-Regular.otf"
+          fc-cache "$markdang_font_dir"
       - name: Browser regression tests
         run: npm run test:e2e
       - name: Capture store screenshots

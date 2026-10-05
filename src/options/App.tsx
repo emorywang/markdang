@@ -100,8 +100,8 @@ export function App({ variant = 'page' }: { variant?: 'page' | 'popup' } = {}) {
 
   useEffect(() => {
     document.documentElement.lang = locale
-    document.title = variant === 'page' ? t('settingsTitle') : 'MarkDang'
-  }, [locale, t, variant])
+    document.title = variant === 'page' ? t(section === 'welcome' ? 'welcomeTitle' : 'settingsTitle') : 'MarkDang'
+  }, [locale, t, variant, section])
 
   useEffect(() => {
     void loadSettings().then(s => {
