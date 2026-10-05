@@ -23,9 +23,25 @@ try {
   const extension = await launchExtension({ language: 'en', fileAccess: null })
   context = extension.context
   const { extId } = extension
+  const welcomeUrl = `chrome-extension://${extId}/src/options/index.html?welcome`
+  const openCurrentWelcome = async () => {
+    const page = await context.newPage()
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await page.goto(welcomeUrl)
+        await page.waitForSelector('.setup-card')
+        return page
+      } catch (error) {
+        // The native settings callback can finish before an extension reload.
+        // Retry only this transient navigation failure, for at most five seconds.
+        if (attempt >= 50 || !String(error).includes('ERR_BLOCKED_BY_CLIENT')) throw error
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+    }
+  }
   let welcome
   for (let i = 0; i < 100 && !welcome; i++) {
-    welcome = context.pages().find(page => page.url() === `chrome-extension://${extId}/src/options/index.html?welcome`)
+    welcome = context.pages().find(page => page.url() === welcomeUrl)
     if (!welcome) await new Promise(resolve => setTimeout(resolve, 100))
   }
   assert.ok(welcome, `first install opens the welcome page; tabs: ${context.pages().map(page => page.url()).join(', ')}`)
@@ -39,9 +55,7 @@ try {
   await manager.close()
   // Chromium can close the first-install tab when reloading the extension.
   // Open a current extension page to exercise the store's denied-access state.
-  if (welcome.isClosed()) welcome = await context.newPage()
-  await welcome.goto(`chrome-extension://${extId}/src/options/index.html?welcome`)
-  await welcome.waitForSelector('.setup-card')
+  welcome = await openCurrentWelcome()
   const errors = []
   welcome.on('pageerror', error => errors.push(error.message))
   await welcome.waitForFunction(() => document.documentElement.lang === 'en')
@@ -78,11 +92,8 @@ try {
     chrome.developerPrivate.updateExtensionConfiguration({ extensionId: id, fileAccess: true }, () => resolve(chrome.runtime.lastError?.message))
   }), extId)
   assert.equal(permissionError, undefined)
-  if (welcome.isClosed()) {
-    welcome = await context.newPage()
-    await welcome.goto(`chrome-extension://${extId}/src/options/index.html?welcome`)
-    welcome.on('pageerror', error => errors.push(error.message))
-  }
+  welcome = await openCurrentWelcome()
+  welcome.on('pageerror', error => errors.push(error.message))
   await welcome.bringToFront()
   await welcome.waitForFunction(() => document.querySelector('.file-access-status')?.textContent.includes('is allowed'))
   ok('returning from extension details refreshes the permission status', await welcome.evaluate(() => chrome.extension.isAllowedFileSchemeAccess()))
