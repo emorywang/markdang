@@ -16,7 +16,11 @@ export async function launchExtension({ language, fileAccess = true } = {}) {
       ...(process.env.MARKDANG_BROWSER_PATH ? { executablePath: process.env.MARKDANG_BROWSER_PATH } : {}),
       headless: process.env.MARKDANG_HEADLESS !== 'false',
       colorScheme: 'light',
-      args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`, '--no-first-run'],
+      // This fresh profile contains no user extensions. Disabling extensions
+      // globally prevents an unpacked extension from reloading after a native
+      // permission change, even if its initial command-line load was allowed.
+      ignoreDefaultArgs: ['--disable-extensions'],
+      args: [`--load-extension=${extension}`, '--no-first-run'],
     })
     /* Tests never disclose fixture content to a remote diagram/image server. */
     await context.route(/^https?:/, route => {
