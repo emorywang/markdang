@@ -3,13 +3,18 @@ import assert from 'node:assert/strict'
 
 type Listener = (message: unknown, sender: chrome.runtime.MessageSender, callback: (value: unknown) => void) => boolean
 let listener: Listener
+let installed: (details: chrome.runtime.InstalledDetails) => void
 let created: { id: number; url: string }[] = []
 let removed: number[] = []
 let stored: Record<string, unknown> = {}
 let id = 10
 const sender: chrome.runtime.MessageSender = { id: 'test', frameId: 0, tab: { id: 1 } as chrome.tabs.Tab, url: 'file:///docs/a.md' }
 globalThis.chrome = {
-  runtime: { id: 'test', onMessage: { addListener: (value: Listener) => { listener = value } } },
+  runtime: {
+    id: 'test', getURL: (path: string) => `chrome-extension://test/${path}`,
+    onMessage: { addListener: (value: Listener) => { listener = value } },
+    onInstalled: { addListener: (value: typeof installed) => { installed = value } },
+  },
   storage: { local: { get: async () => structuredClone(stored), set: async (patch: Record<string, unknown>) => { stored = { ...stored, ...patch } } } },
   tabs: {
     create: async ({ url }: { url: string }) => { const tab = { id: id++, url }; created.push(tab); return tab },
@@ -25,6 +30,17 @@ const send = (action: string, data: unknown, source = sender): Promise<unknown> 
 })
 const flush = () => new Promise<void>(resolve => queueMicrotask(resolve))
 const reportSender = (tab: { id: number; url: string }): chrome.runtime.MessageSender => ({ id: 'test', frameId: 0, tab: tab as chrome.tabs.Tab, url: tab.url })
+
+test('first install opens a local welcome page; updates do not interrupt users', async () => {
+  created = []
+  installed({ reason: 'update', previousVersion: '1.0.0' })
+  installed({ reason: 'chrome_update' })
+  assert.equal(created.length, 0)
+  installed({ reason: 'install' })
+  await flush()
+  assert.equal(created.length, 1)
+  assert.equal(created[0].url, 'chrome-extension://test/src/options/index.html?welcome')
+})
 
 test('worker serializes simultaneous partial settings writes', async () => {
   stored = {}

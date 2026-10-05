@@ -29,7 +29,7 @@ Settings are saved locally in the current browser profile and apply to open read
 | `isOutlineExpandable` | `true` | Show fold controls; disabling reveals folded headings |
 | `sideCollapsed` | `false` | Remember sidebar visibility |
 
-Local file access is a browser permission, not a storage setting. The settings page shows whether it is granted and links to the extension's details page. The browser must grant **Allow access to file URLs** before the extension can read local documents or directories.
+Local file access is a browser permission, not a storage setting. Store installations start with it disabled; only the user can enable **Allow access to file URLs** in extension details. MarkDang opens a welcome page on first installation, not on updates. The welcome page, settings, and popup show the actual status and link to Chrome or Edge extension details. The status is checked again when the page regains focus or becomes visible. Reload open local documents after granting access. Web documents do not require this file permission.
 
 ## Plugins
 

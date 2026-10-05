@@ -31,7 +31,7 @@ MARKDANG_BROWSER_PATH=/path/to/chromium npm run test:e2e
 
 在 PR 对应的成功 Actions 构建页，从 **Artifacts** 下载 **markdang-…** 测试包：先解压下载包，再解压其中的 `markdang-v<version>.zip`。在 `chrome://extensions` 或 `edge://extensions` 加载直接包含 `manifest.json` 的文件夹，开启本地文件访问，打开一个 Markdown 文件即可。测试期间先关闭旧版扩展，并保留解压目录。
 
-另一个 **popup-previews-…** 包包含中英文关于页在浅色、深色模式下的 400 × 600 弹窗截图。
+另一个 **popup-previews-…** 包包含中英文关于页在浅色、深色模式下的 400 × 600 弹窗截图。**setup-previews-…** 包含中英文欢迎页的浅深色截图。安装引导测试从未授予文件访问的状态开始，检查浏览器中的实际授权和状态更新，以及网页、本地文档、目录页面的图标加载。
 
 ## 日常开发
 

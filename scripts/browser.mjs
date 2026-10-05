@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright-core'
 
 export const ROOT = fileURLToPath(new URL('../', import.meta.url))
-export async function launchExtension({ language } = {}) {
+export async function launchExtension({ language, fileAccess = true } = {}) {
   const extension = path.join(ROOT, 'extension')
   if (!fs.existsSync(path.join(extension, 'manifest.json'))) throw new Error('Run npm run build before browser tests')
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'markdang-test-'))
@@ -29,11 +29,11 @@ export async function launchExtension({ language } = {}) {
     if (language) await worker.evaluate(language => chrome.storage.local.set({ language }), language)
     const manager = await context.newPage()
     await manager.goto('chrome://extensions')
-    const error = await manager.evaluate(id => new Promise(resolve => {
-      chrome.developerPrivate.updateExtensionConfiguration({ extensionId: id, fileAccess: true }, () => resolve(chrome.runtime.lastError?.message))
-    }), extId)
+    const error = await manager.evaluate(({ id, fileAccess }) => new Promise(resolve => {
+      chrome.developerPrivate.updateExtensionConfiguration({ extensionId: id, fileAccess }, () => resolve(chrome.runtime.lastError?.message))
+    }), { id: extId, fileAccess })
     await manager.close()
-    if (error) throw new Error(`Could not grant local file access: ${error}`)
+    if (error) throw new Error(`Could not configure local file access for browser tests: ${error}`)
     const close = context.close.bind(context)
     context.close = async (...args) => {
       try { await close(...args) } finally { fs.rmSync(profile, { recursive: true, force: true }) }

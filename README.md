@@ -41,7 +41,9 @@ npm run build
 1. Open `chrome://extensions` or `edge://extensions`.
 2. Enable **Developer mode** and select **Load unpacked**.
 3. Select the generated `extension/` directory, which contains `manifest.json`.
-4. To read local files or folders, open the extension's details and enable **Allow access to file URLs**. The popup also shows this permission's status.
+4. To read local files or folders, open the extension's details and enable **Allow access to file URLs**, then reload any open document. This browser permission is off by default for store installations and must be enabled by the user.
+
+On first installation, MarkDang opens a welcome page with a sample document and local-file setup steps. Its **Extension details** button opens the appropriate Chrome or Edge page. The welcome page and popup show the current file-access status; returning from extension details updates that status. Extension updates do not reopen the welcome page.
 
 Keep the selected directory in place. After rebuilding, reload the extension and its document tabs.
 
@@ -54,6 +56,8 @@ This repository does not currently provide a store-install link.
 ## Use
 
 Open a supported document URL, such as `file:///D:/docs/README.md` or a web-hosted raw Markdown file. Use the sidebar's outline and folder tabs to navigate. The action buttons toggle the sidebar, source view, and theme; print; enter fullscreen; and return to the top. Zen mode retains an exit button and supports Esc.
+
+Rendered documents and directory views use MarkDang's bundled tab icon. If another Markdown reader is installed, disable it while using MarkDang so both extensions do not rewrite the same page.
 
 Shortcuts are editable at `chrome://extensions/shortcuts` (or the equivalent Edge page):
 

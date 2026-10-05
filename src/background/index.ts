@@ -13,6 +13,13 @@ interface Probe {
 }
 const probes = new Map<string, Probe>()
 
+chrome.runtime.onInstalled.addListener(({ reason }) => {
+  if (reason !== 'install') return
+  void chrome.tabs.create({ url: chrome.runtime.getURL('src/options/index.html?welcome') }).catch(error => {
+    console.warn('[markdang] could not open the welcome page', error)
+  })
+})
+
 function closeTab(id: number) {
   void chrome.tabs.remove(id).catch(() => {})
 }
