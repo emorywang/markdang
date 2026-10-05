@@ -31,15 +31,21 @@ export async function launchExtension({ language, fileAccess = true } = {}) {
     worker ??= await context.waitForEvent('serviceworker', { timeout: 15000 })
     const extId = new URL(worker.url()).hostname
     if (language) await worker.evaluate(language => chrome.storage.local.set({ language }), language)
+    const manager = await context.newPage()
+    await manager.goto('chrome://extensions')
+    // Command-line installation bypasses the unpacked-extension developer-mode
+    // check. Native permission changes reload it as an unpacked extension.
+    const modeError = await manager.evaluate(() => new Promise(resolve => {
+      chrome.developerPrivate.updateProfileConfiguration({ inDeveloperMode: true }, () => resolve(chrome.runtime.lastError?.message))
+    }))
+    if (modeError) throw new Error(`Could not enable developer mode for browser tests: ${modeError}`)
     if (fileAccess !== null) {
-      const manager = await context.newPage()
-      await manager.goto('chrome://extensions')
       const error = await manager.evaluate(({ id, fileAccess }) => new Promise(resolve => {
         chrome.developerPrivate.updateExtensionConfiguration({ extensionId: id, fileAccess }, () => resolve(chrome.runtime.lastError?.message))
       }), { id: extId, fileAccess })
-      await manager.close()
       if (error) throw new Error(`Could not configure local file access for browser tests: ${error}`)
     }
+    await manager.close()
     const close = context.close.bind(context)
     context.close = async (...args) => {
       try { await close(...args) } finally { fs.rmSync(profile, { recursive: true, force: true }) }
