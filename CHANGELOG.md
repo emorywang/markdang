@@ -6,6 +6,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+Target version: 1.0.2.
+
 ### Added
 
 - A bilingual first-install welcome page with a reading sample and local-file setup steps. Updates do not reopen it.
