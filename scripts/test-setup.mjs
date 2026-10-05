@@ -52,10 +52,22 @@ try {
     chrome.developerPrivate.updateExtensionConfiguration({ extensionId: id, fileAccess: false }, () => resolve(chrome.runtime.lastError?.message))
   }), extId)
   assert.equal(denyError, undefined)
-  await manager.close()
   // Chromium can close the first-install tab when reloading the extension.
   // Open a current extension page to exercise the store's denied-access state.
-  welcome = await openCurrentWelcome()
+  try {
+    welcome = await openCurrentWelcome()
+  } catch (error) {
+    const state = await manager.evaluate(() => new Promise(resolve => {
+      chrome.developerPrivate.getExtensionsInfo({ includeDisabled: true, includeTerminated: true }, extensions => resolve(extensions.map(info => ({
+        id: info.id, name: info.name, state: info.state, location: info.location,
+        path: info.path, disableReasons: info.disableReasons,
+        runtimeErrors: info.runtimeErrors, manifestErrors: info.manifestErrors,
+      }))))
+    }))
+    console.error('Extensions after file-access change:', JSON.stringify(state))
+    throw error
+  }
+  await manager.close()
   const errors = []
   welcome.on('pageerror', error => errors.push(error.message))
   await welcome.waitForFunction(() => document.documentElement.lang === 'en')
