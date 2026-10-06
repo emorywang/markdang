@@ -108,7 +108,8 @@ try {
   ok('the bundled Mermaid renderer supports math with the shared KaTeX dependency', await storage.evaluate(async () => {
     await import(chrome.runtime.getURL('assets/mermaid.js'))
     const mermaid = window.__markdangMermaid
-    mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', htmlLabels: false })
+    // Enable HTML labels here to exercise Mermaid's own KaTeX integration.
+    mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', htmlLabels: true })
     const { svg } = await mermaid.render('markdang-math-regression', 'flowchart LR\nA["$$\\frac{a}{b}$$"] --> B[End]')
     return svg.includes('<mfrac')
   }))
