@@ -31,7 +31,9 @@ Recent branded Chrome/Edge versions restrict command-line extension loading. Pre
 
 For a quick manual test of a PR, download the **markdang-…** package under **Artifacts** in its successful Actions run. Extract the download, then extract the `markdang-v<version>.zip` inside it. Load the folder containing `manifest.json` at `chrome://extensions` or `edge://extensions`, enable local file access, and open a Markdown file. Disable any older MarkDang installation while testing. Keep the extracted folder in place.
 
-The separate **popup-previews-…** artifact contains Chinese and English About screenshots at 400 × 600 in light and dark modes.
+The separate **popup-previews-…** artifact contains Chinese and English About screenshots at 400 × 600 in light and dark modes. **setup-previews-…** contains the bilingual welcome page in both themes. The setup suite starts with file access denied, tests the native permission change and status refresh, and checks favicon loading on web, local-document, and directory pages.
+
+CI downloads a pinned Noto Sans CJK SC font with bounded retries for screenshot rendering. This test-environment font is not added to the extension package.
 
 `npm run dev` rebuilds on source changes. After each build, click **Reload** for the unpacked extension and reload the document tab. This is a build watcher, not a Vite web server or browser hot-reload system.
 

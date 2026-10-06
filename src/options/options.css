@@ -109,6 +109,16 @@ body { margin: 0; background: var(--bg); color: var(--text); transition: backgro
 .content { flex: 1; padding: 26px 34px 60px; max-width: 720px; min-width: 0; }
 h1 { font-size: 21px; margin: 0 0 16px; letter-spacing: -0.01em; }
 
+/* first install */
+.welcome-intro { color: var(--muted); font-size: 14px; line-height: 1.7; margin: 0 0 22px; }
+.setup-card { background: var(--card); border-radius: 14px; box-shadow: var(--shadow); padding: 20px; margin-bottom: 18px; font-size: 14px; line-height: 1.7; }
+.setup-card h2 { margin: 0 0 8px; font-size: 16px; }
+.setup-card p { margin: 0 0 14px; }
+.setup-card ol { padding-left: 22px; margin: 0 0 14px; }
+.setup-card li + li { margin-top: 6px; }
+.setup-card a.btn { display: inline-block; text-decoration: none; }
+.file-access-status { color: var(--muted); }
+
 /* grouped cards */
 .group { margin-bottom: 20px; }
 .group-title {

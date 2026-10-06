@@ -2,7 +2,7 @@
 
 [简体中文](store-listing.zh-CN.md) · [Publishing steps](publishing.md)
 
-Copy each field's text into the matching dashboard field. These statements describe version 1.0.0. The package supplies the name and short description; editing this document alone does not change them.
+Copy each field's text into the matching dashboard field. These statements describe version 1.0.2. The package supplies the name and short description; editing this document alone does not change them.
 
 ## Name
 
@@ -14,7 +14,7 @@ Read Markdown comfortably in your browser. No accounts, subscriptions, or teleme
 
 ## Detailed description
 
-MarkDang turns Markdown files into a readable page in Chrome, with an outline, code highlighting, math, and diagrams.
+MarkDang turns Markdown files into a readable page in Chrome and Edge, with an outline, code highlighting, math, and diagrams.
 
 I built it for reading project documentation and notes directly in the browser. Open a local file or a raw Markdown URL, and use the outline to move between sections without switching to an editor.
 
@@ -27,7 +27,7 @@ What it does:
 - Includes source view, zen mode, print styles, code copying, image zoom, and optional auto refresh.
 - Supports English and Simplified Chinese, with automatic browser-language selection or a manual choice.
 
-For local files, enable “Allow access to file URLs” in the extension's Chrome details. Web documents must use a supported filename extension and be served as plain text or Markdown. MDX is displayed as Markdown; JSX, imports, and JavaScript are not executed. Clicking a task checkbox changes the view, not the original file.
+For local files, enable “Allow access to file URLs” in the browser's extension details. Web documents must use a supported filename extension and be served as plain text or Markdown. MDX is displayed as Markdown; JSX, imports, and JavaScript are not executed. The first-install welcome page includes setup steps and a shortcut to extension details; reload open local documents after granting access. Clicking a task checkbox changes the view, not the original file.
 
 There are no accounts, subscriptions, ads, or telemetry. Rendering libraries and fonts are bundled, and preferences stay in the browser profile. Web documents, remote images, and custom CSS may still make requests to their hosts. PlantUML is off by default; if you enable it, diagram source is sent to www.plantuml.com for rendering.
 
@@ -46,7 +46,7 @@ The storage permission saves reading preferences, plugin options, interface lang
 
 ## Page access / host justification
 
-Content scripts recognize supported Markdown and optional plain-text document URLs on HTTP(S) hosts and local file URLs. Documents can be hosted on any domain, so their hosts cannot be enumerated in advance. Ordinary HTML website pages are not converted. Local access also supports Chrome's directory listing and requires the user's separate “Allow access to file URLs” setting. The extension reads the current document and, when file browsing is used, its parent directory index. Local document refresh and directory reads may briefly open an inactive tab scoped to those resources. It does not enumerate unrelated tabs or record browsing history. The manifest has no separate host_permissions field; its content-script match patterns provide document-page access.
+Content scripts recognize supported Markdown and optional plain-text document URLs on HTTP(S) hosts and local file URLs. Documents can be hosted on any domain, so their hosts cannot be enumerated in advance. Ordinary HTML website pages are not converted. Local access also supports the browser's directory listing and requires the user's separate “Allow access to file URLs” setting. The extension reads the current document and, when file browsing is used, its parent directory index. Local document refresh and directory reads may briefly open an inactive tab scoped to those resources. It does not enumerate unrelated tabs or record browsing history. The manifest has no separate host_permissions field; its content-script match patterns provide document-page access.
 
 ## Remote code choice and explanation
 
@@ -77,7 +77,7 @@ No account, payment, license key, or test credentials are required. The interfac
 1. Install the extension and open https://raw.githubusercontent.com/emorywang/markdang/main/demo/review-sample.md. This plain-text sample should render headings, code, a table, formulas, and a Mermaid diagram.
 2. Navigate with the outline. Switch light/dark themes, open source view, and try printing or zen mode. Esc exits zen mode.
 3. Open the popup and full settings. Change the interface language in General; the settings and open reader update. Check About's support links.
-4. For local testing, save the sample as review-sample.md. In chrome://extensions, choose MarkDang → Details and enable “Allow access to file URLs”. Drag the saved .md file into Chrome. Put a second .md file beside it and use the folder tab to browse.
+4. For local testing, save the sample as review-sample.md. In chrome://extensions or edge://extensions, choose MarkDang → Details and enable “Allow access to file URLs”. Drag the saved .md file into the browser. Put a second .md file beside it and use the folder tab to browse.
 5. Enable Task lists under Plugins and reload the sample to try checkboxes. Changes affect only the displayed page and disappear after reload.
 6. Auto refresh is off by default. Enable it for a local file, edit and save the source, and check the updated view. An inactive local probe tab may briefly open; it closes after reading.
 7. PlantUML is off by default and separate from the local-plugin bulk switch. Its setting discloses sending source to www.plantuml.com. It is not needed for these reading tests. Do not use confidential source to test the external service.

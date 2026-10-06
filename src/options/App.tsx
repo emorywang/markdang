@@ -1,6 +1,7 @@
 import { useContext, useEffect, useMemo, useState } from 'preact/hooks'
 import { createContext, type ComponentChildren } from 'preact'
 import { createTranslator, resolveLocale, type MessageKey } from '../shared/i18n'
+import { extensionDetailsUrl } from '../shared/browser'
 import {
   loadSettings,
   saveSettings,
@@ -79,31 +80,62 @@ function Segmented<T extends string>(props: { value: T; options: { value: T; lab
 
 /* -------------------------------------------------- app */
 
-type Section = 'general' | 'appearance' | 'plugins' | 'about'
+type Section = 'welcome' | 'general' | 'appearance' | 'plugins' | 'about'
+type FileAccess = 'checking' | 'allowed' | 'denied' | 'error'
+const FILE_ACCESS_LABELS: Record<FileAccess, MessageKey> = {
+  checking: 'fileAccessLoading', allowed: 'fileAccessAllowed', denied: 'fileAccessDenied', error: 'fileAccessError',
+}
 
 export function App({ variant = 'page' }: { variant?: 'page' | 'popup' } = {}) {
   const [settings, setSettings] = useState<Settings | null>(null)
-  const [section, setSection] = useState<Section>('general')
+  const [section, setSection] = useState<Section>(() =>
+    variant === 'page' && new URLSearchParams(location.search).has('welcome') ? 'welcome' : 'general',
+  )
   const [expanded, setExpanded] = useState<string[]>([])
   const [cssDraft, setCssDraft] = useState('')
   const [error, setError] = useState('')
-  const [fileAccess, setFileAccess] = useState<boolean | null>(null)
+  const [fileAccess, setFileAccess] = useState<FileAccess>('checking')
   const locale = resolveLocale(settings?.language)
   const t = useMemo(() => createTranslator(locale), [locale])
 
   useEffect(() => {
     document.documentElement.lang = locale
-    document.title = variant === 'page' ? t('settingsTitle') : 'MarkDang'
-  }, [locale, t, variant])
+    document.title = variant === 'page' ? t(section === 'welcome' ? 'welcomeTitle' : 'settingsTitle') : 'MarkDang'
+  }, [locale, t, variant, section])
 
   useEffect(() => {
     void loadSettings().then(s => {
       setSettings(s)
       setCssDraft(s.customCSS)
     }).catch(error => setError(String(error)))
-    chrome.extension.isAllowedFileSchemeAccess(allowed => setFileAccess(allowed))
     return onSettingsChanged(setSettings)
   }, [])
+
+  useEffect(() => {
+    let disposed = false
+    let request = 0
+    const check = () => {
+      const current = ++request
+      void chrome.extension.isAllowedFileSchemeAccess().then(allowed => {
+        if (!disposed && current === request) setFileAccess(allowed ? 'allowed' : 'denied')
+      }).catch(() => {
+        if (!disposed && current === request) setFileAccess('error')
+      })
+    }
+    const visible = () => { if (!document.hidden) check() }
+    check()
+    window.addEventListener('focus', check)
+    document.addEventListener('visibilitychange', visible)
+    return () => {
+      disposed = true
+      window.removeEventListener('focus', check)
+      document.removeEventListener('visibilitychange', visible)
+    }
+  }, [])
+
+  const openDetails = () => {
+    void chrome.tabs.create({ url: extensionDetailsUrl(chrome.runtime.id, navigator.userAgent) }).catch(error => setError(String(error)))
+  }
 
   const patch = useMemo(() => {
     return (p: DeepPartial<Settings>) => {
@@ -158,6 +190,28 @@ export function App({ variant = 'page' }: { variant?: 'page' | 'popup' } = {}) {
 
         <main class="content">
           {error && <p role="alert">{t('settingsError', { error })}</p>}
+          {section === 'welcome' && (
+            <>
+              <h1>{t('welcomeTitle')}</h1>
+              <p class="welcome-intro">{t('welcomeIntro')}</p>
+              <section class="setup-card" aria-labelledby="web-setup-title">
+                <h2 id="web-setup-title">{t('readWeb')}</h2>
+                <p>{t('readWebDesc')}</p>
+                <a class="btn" href="https://raw.githubusercontent.com/emorywang/markdang/main/demo/review-sample.md" target="_blank" rel="noopener noreferrer">{t('openSample')}</a>
+              </section>
+              <section class="setup-card" aria-labelledby="local-setup-title">
+                <h2 id="local-setup-title">{t('readLocal')}</h2>
+                <p>{t('readLocalDesc')}</p>
+                <ol>
+                  <li>{t('readLocalStepOne')}</li>
+                  <li>{t('readLocalStepTwo')}</li>
+                </ol>
+                <p class="file-access-status" role="status">{t(FILE_ACCESS_LABELS[fileAccess])}</p>
+                <button class={`btn${fileAccess === 'denied' ? ' primary' : ''}`} type="button" onClick={openDetails}>{t('extensionDetails')}</button>
+              </section>
+              <button class="btn" type="button" onClick={() => setSection('general')}>{t('openSettings')}</button>
+            </>
+          )}
           {section === 'general' && (
             <>
               <h1>{t('general')}</h1>
@@ -170,8 +224,8 @@ export function App({ variant = 'page' }: { variant?: 'page' | 'popup' } = {}) {
                     <option value="en">English</option>
                   </select>
                 </Field>
-                <Field title={t('fileAccess')} desc={fileAccess === null ? t('fileAccessLoading') : fileAccess ? t('fileAccessAllowed') : t('fileAccessDenied')}>
-                  <button class="btn" onClick={() => chrome.tabs.create({ url: `chrome://extensions/?id=${chrome.runtime.id}` })}>
+                <Field title={t('fileAccess')} desc={t(FILE_ACCESS_LABELS[fileAccess])}>
+                  <button class="btn" type="button" onClick={openDetails}>
                     {t('extensionDetails')}
                   </button>
                 </Field>

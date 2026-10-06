@@ -2,23 +2,23 @@
 
 [简体中文](publishing.zh-CN.md) · [README](../README.md) · [Store form text](store-listing.md) · [Source review](provenance.md)
 
-For the current 1.0.0 package; checked on 2026-10-03. CI checks, builds, and packages the extension. Merging does not create a Release or submit to a store. These steps assume the publisher account is already registered.
+For the current 1.0.2 package; checked on 2026-10-06. CI checks, builds, and packages the extension. Merging does not create a Release or submit to a store. These steps assume the publisher account is already registered.
 
 ## 1. Merge the checked PR
 
-1. Open [PR #1](https://github.com/emorywang/markdang/pull/1) and confirm Build passed for its latest commit.
+1. Open the current [pull request](https://github.com/emorywang/markdang/pulls) and confirm Build passed for its latest commit.
 2. Merge it. **Squash and merge**, when available, keeps this complete change in one commit; **Merge pull request** also works.
 3. Open [Actions](https://github.com/emorywang/markdang/actions/workflows/build.yml) and wait for the new **main** build to pass.
 
-The earlier fixes and publication preparation share one PR. Merge once, then use the package from main.
+Use the package from the merged main build. For a published extension, update its existing store item so users retain its ID, settings, and update channel.
 
 ## 2. Download the extension ZIP
 
-Download the successful main run's **markdang-…** artifact. Extract that download and take out `markdang-v1.0.0.zip`. This inner ZIP is the package for Release attachments and the store.
+Download the successful main run's **markdang-…** artifact. Extract that download and take out `markdang-v1.0.2.zip`. This inner ZIP is the package for Release attachments and the store.
 
 Its root contains `manifest.json`, `assets/`, `icons/`, `_locales/`, and notices. Do not upload the outer artifact archive or GitHub's automatically generated Source code ZIP.
 
-The kit's `package/markdang-v1.0.0.zip` can be used for inspection and a store draft. Prefer the main CI package after merging for publication. Further source changes may require new screenshots or copy.
+The original 1.0.0 submission kit supplies reusable branding and listing material. Its extension ZIP is the previous version. Use the current main CI ZIP and check whether screenshots or copy need updating.
 
 To build locally, use Node.js 22.12+ (24 LTS recommended):
 
@@ -30,23 +30,25 @@ npm run test:e2e
 node scripts/zip.mjs
 ```
 
-Output: `dist/markdang-v1.0.0.zip`. Linux browser setup may require `npx playwright-core install --with-deps chromium`. For a routine fresh build and ZIP, run `npm run zip`.
+Output: `dist/markdang-v1.0.2.zip`. Linux browser setup may require `npx playwright-core install --with-deps chromium`. For a routine fresh build and ZIP, run `npm run zip`.
 
 ## 3. Create a GitHub Release
 
 1. Open [Releases](https://github.com/emorywang/markdang/releases) and choose **Draft a new release**.
-2. Create **v1.0.0**, targeting merged **main**. If the tag exists, check its target; do not overwrite a published tag.
-3. Use **MarkDang v1.0.0** and the kit's bilingual release notes.
+2. Create **v1.0.2**, targeting merged **main**. If the tag exists, check its target; do not overwrite a published tag.
+3. Use **MarkDang v1.0.2** and the current bilingual changelog entries for the release notes.
 4. Attach the inner extension ZIP. Calculate any accompanying checksum from that exact ZIP, rather than copying another build's checksum.
 5. Choose **Publish release**. A stable release does not need the pre-release option.
 
-Use `Get-FileHash .\markdang-v1.0.0.zip -Algorithm SHA256` in PowerShell or `shasum -a 256 markdang-v1.0.0.zip` on macOS/Linux. Users can extract the Release ZIP and load it as an unpacked extension. The ZIP is not a double-click installer.
+Use `Get-FileHash .\markdang-v1.0.2.zip -Algorithm SHA256` in PowerShell or `shasum -a 256 markdang-v1.0.2.zip` on macOS/Linux. Users can extract the Release ZIP and load it as an unpacked extension. The ZIP is not a double-click installer.
 
 ## 4. Create the store item
 
+For an existing Chrome listing, open that item and upload the new package; do not create another item. The following steps describe a first submission.
+
 1. Open the [Developer Dashboard](https://chrome.google.com/webstore/devconsole) with the registered account. Verify the contact email and complete required two-step verification and identity details.
 2. Choose **Add new item**, upload the inner ZIP, and record the new MarkDang item ID.
-3. Under **Package**, confirm MarkDang, version 1.0.0, and Manifest V3.
+3. Under **Package**, confirm MarkDang, version 1.0.2, and Manifest V3.
 4. In **Store listing**, use **Tools** as the suggested category and English as the default language.
 5. Add the English description and five `screenshots/en/` images; add the Simplified Chinese description and `screenshots/zh-CN/` images to that locale.
 6. The package also contains `zh_TW` installation metadata. If that locale appears, use the supplied Traditional Chinese listing and Chinese screenshots. State that the reading interface supports English and Simplified Chinese.
@@ -93,7 +95,13 @@ Store and unpacked versions can have different IDs, so their settings do not aut
 
 ## Updates
 
-Update the same store item. Increment `package.json`, the lockfile, and `manifest.json` consistently, including `version_name`. Check and upload the new ZIP, such as 1.0.1, then create its Release. Preserve published tags and assets.
+Update the same store item. Increment `package.json`, the lockfile, and `manifest.json` consistently, including `version_name`. Check and upload the new ZIP, such as 1.0.2, then create its Release. Preserve published tags and assets.
+
+## Microsoft Edge updates
+
+Use the same ZIP for the existing MarkDang item in Partner Center. Chrome and Edge have separate item IDs and review/update processes. Keep file-access instructions in each localized listing: store installs start with local access disabled, and only the user can enable it in extension details.
+
+MarkDang requires no account, credentials, or private test information. On the final submission page, choose the option stating that testers can access and test all features without additional information. The reviewer walkthrough is optional supporting material. After certification passes, Edge publishes the submitted version automatically.
 
 ## Official references
 
@@ -103,6 +111,8 @@ Update the same store item. Increment `package.json`, the lockfile, and `manifes
 - [Categories](https://developer.chrome.com/docs/webstore/best-practices#choose_your_extensions_category_well)
 - [Privacy and local handling](https://developer.chrome.com/docs/webstore/program-policies/user-data-faq)
 - [Remote hosted code](https://developer.chrome.com/docs/extensions/develop/migrate/remote-hosted-code)
+- [Edge submission and optional reviewer notes](https://learn.microsoft.com/en-us/microsoft-edge/extensions/publish/publish-extension)
+- [Edge updates](https://learn.microsoft.com/en-us/microsoft-edge/extensions/update/update-extension)
 - [GitHub Releases](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository)
 
 Dashboard labels may change; follow its current required fields. This guide does not replace store review.

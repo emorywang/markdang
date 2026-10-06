@@ -6,6 +6,21 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+Target version: 1.0.2.
+
+### Added
+
+- A bilingual first-install welcome page with a reading sample and local-file setup steps. Updates do not reopen it.
+
+### Fixed
+
+- Set the bundled MarkDang favicon on rendered documents and directories, replacing previous icon candidates.
+- Open the correct Chrome or Edge extension details page and refresh file-access status when returning to settings.
+
+## [1.0.0] - 2026-10-01
+
+The first public version of MarkDang (码刻档), an independently developed browser Markdown reader. No accounts, subscriptions, or telemetry; free for personal and noncommercial use.
+
 ### Added
 
 - English and Simplified Chinese interfaces, with automatic browser-language selection and a persistent manual choice.
@@ -36,10 +51,6 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Package formula fonts as local WOFF2 resources loaded on demand, reducing the reader script and release size.
 - Make browser tests portable and self-contained; add unit and regression suites to CI.
 - Correct repository links, setup/ZIP instructions, privacy claims, settings behavior, and contributor guidance.
-
-## [1.0.0] - 2026-10-01
-
-The first public version of MarkDang (码刻档), an independently developed browser Markdown reader. No accounts, subscriptions, or telemetry; free for personal and noncommercial use.
 
 ### Branding
 

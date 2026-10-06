@@ -180,6 +180,13 @@ class Reader {
       this.applyAppearance()
     })
     this.scheduleRefresh()
+
+    // Set a page icon only after the reader has started successfully.
+    document.querySelectorAll('link[rel~="icon"]').forEach(icon => icon.remove())
+    document.head.append(el('link', {
+      id: 'markdang-favicon', rel: 'icon', type: 'image/png', sizes: '32x32',
+      href: chrome.runtime.getURL('icons/icon-32.png'),
+    }))
   }
 
   /* ------------------------------------------------------------ *

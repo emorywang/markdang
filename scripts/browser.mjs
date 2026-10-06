@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright-core'
 
 export const ROOT = fileURLToPath(new URL('../', import.meta.url))
-export async function launchExtension({ language } = {}) {
+export async function launchExtension({ language, fileAccess = true } = {}) {
   const extension = path.join(ROOT, 'extension')
   if (!fs.existsSync(path.join(extension, 'manifest.json'))) throw new Error('Run npm run build before browser tests')
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'markdang-test-'))
@@ -16,7 +16,11 @@ export async function launchExtension({ language } = {}) {
       ...(process.env.MARKDANG_BROWSER_PATH ? { executablePath: process.env.MARKDANG_BROWSER_PATH } : {}),
       headless: process.env.MARKDANG_HEADLESS !== 'false',
       colorScheme: 'light',
-      args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`, '--no-first-run'],
+      // This fresh profile contains no user extensions. Disabling extensions
+      // globally prevents an unpacked extension from reloading after a native
+      // permission change, even if its initial command-line load was allowed.
+      ignoreDefaultArgs: ['--disable-extensions'],
+      args: [`--load-extension=${extension}`, '--no-first-run'],
     })
     /* Tests never disclose fixture content to a remote diagram/image server. */
     await context.route(/^https?:/, route => {
@@ -29,11 +33,19 @@ export async function launchExtension({ language } = {}) {
     if (language) await worker.evaluate(language => chrome.storage.local.set({ language }), language)
     const manager = await context.newPage()
     await manager.goto('chrome://extensions')
-    const error = await manager.evaluate(id => new Promise(resolve => {
-      chrome.developerPrivate.updateExtensionConfiguration({ extensionId: id, fileAccess: true }, () => resolve(chrome.runtime.lastError?.message))
-    }), extId)
+    // Command-line installation bypasses the unpacked-extension developer-mode
+    // check. Native permission changes reload it as an unpacked extension.
+    const modeError = await manager.evaluate(() => new Promise(resolve => {
+      chrome.developerPrivate.updateProfileConfiguration({ inDeveloperMode: true }, () => resolve(chrome.runtime.lastError?.message))
+    }))
+    if (modeError) throw new Error(`Could not enable developer mode for browser tests: ${modeError}`)
+    if (fileAccess !== null) {
+      const error = await manager.evaluate(({ id, fileAccess }) => new Promise(resolve => {
+        chrome.developerPrivate.updateExtensionConfiguration({ extensionId: id, fileAccess }, () => resolve(chrome.runtime.lastError?.message))
+      }), { id: extId, fileAccess })
+      if (error) throw new Error(`Could not configure local file access for browser tests: ${error}`)
+    }
     await manager.close()
-    if (error) throw new Error(`Could not grant local file access: ${error}`)
     const close = context.close.bind(context)
     context.close = async (...args) => {
       try { await close(...args) } finally { fs.rmSync(profile, { recursive: true, force: true }) }
