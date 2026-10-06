@@ -7,6 +7,7 @@ Use Node.js 22.12 or later (Node.js 24 LTS recommended) and npm. Run commands fr
 ```bash
 npm ci
 npm run check          # TypeScript, unit tests, and a clean production build
+npm audit --audit-level=high
 npx playwright-core install chromium
 npm run test:e2e       # Browser feature, interaction, option, regression, and language suites
 npm run zip            # Rebuild and package dist/markdang-v<version>.zip
@@ -47,9 +48,11 @@ Maintain complete text pairs in `src/shared/i18n.ts` and update both language ve
 
 CI actions are pinned to reviewed release commits. When updating them, verify the upstream release and change both its commit SHA and version comment.
 
+`overrides.katex` reuses the direct KaTeX dependency range so the Markdown plugin and Mermaid share the patched renderer. Keep its JavaScript, stylesheet, and fonts on the same version, and check both document and diagram math after upgrades.
+
 ## Release checklist
 
-1. Run `npm ci`, `npm run check`, and `npm run test:e2e`.
+1. Run `npm ci`, `npm run check`, `npm audit --audit-level=high`, and `npm run test:e2e`.
 2. Review English/Chinese interfaces, light/dark reader views, the actual 400 × 600 popup, keyboard navigation, and local-file permission guidance. Check language persistence, live reader labels, and the About support links.
 3. Update the version in `package.json`, its lockfile root, and `public/manifest.json` (`version` and `version_name`). The build rejects mismatches.
 4. Update both language versions of the changelog and run `npm run zip`.

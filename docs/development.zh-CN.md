@@ -7,6 +7,7 @@
 ```bash
 npm ci
 npm run check          # 类型检查、单元测试、干净的生产构建
+npm audit --audit-level=high
 npx playwright-core install chromium
 npm run test:e2e       # 浏览器功能、交互、选项、回归及语言测试
 npm run zip           # 重新构建并生成 dist/markdang-v<version>.zip
@@ -49,9 +50,11 @@ CI 下载固定版本的 Noto Sans CJK SC 字体用于截图，下载设有超�
 
 CI Action 固定到已审核的发布提交。升级时核实上游版本，同时更新 SHA 和版本注释。
 
+`overrides.katex` 复用直接依赖的 KaTeX 版本范围，让 Markdown 插件与 Mermaid 共用已修复的渲染器。升级后，保持 JavaScript、样式表与字体版本一致，并验证文档公式和图表公式。
+
 ## 发布检查清单
 
-1. 运行 `npm ci`、`npm run check`、`npm run test:e2e`。
+1. 运行 `npm ci`、`npm run check`、`npm audit --audit-level=high`、`npm run test:e2e`。
 2. 检查中英文界面、浅深色阅读视图、实际 400 × 600 弹窗、键盘操作及本地权限提示。确认语言保存、已打开阅读器的即时切换，以及关于页的支持链接。
 3. 同步更新 `package.json`、锁文件根节点、`public/manifest.json` 的 `version` 和 `version_name`；构建会拒绝版本不一致的情况。
 4. 更新两种语言的更新日志，运行 `npm run zip`。

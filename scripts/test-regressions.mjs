@@ -95,6 +95,24 @@ try {
   await page.waitForSelector('.markdang__mermaid svg', { timeout: 15000 })
   ok('custom Mermaid JSON retains safe rendering', await page.locator('.markdang__mermaid svg').count() === 1)
 
+  await patch({ mdPluginOptions: { Katex: { enableFencedBlocks: true } } })
+  await goto('Inline $\\frac{a}{b}$\n\n$$\\begin{pmatrix}a & b \\\\ c & d\\end{pmatrix}$$\n\n```math\n\\sqrt{x^2+y^2}\n```')
+  ok('inline, display, and fenced math retain matching fonts and styles', await page.evaluate(async () => {
+    await document.fonts.ready
+    const formulas = [...document.querySelectorAll('.markdang-content .katex')]
+    return formulas.length === 3 && formulas.every(formula => {
+      const box = formula.getBoundingClientRect()
+      return box.width > 0 && box.height > 0 && getComputedStyle(formula).fontFamily.includes('KaTeX_Main')
+    })
+  }))
+  ok('the bundled Mermaid renderer supports math with the shared KaTeX dependency', await storage.evaluate(async () => {
+    await import(chrome.runtime.getURL('assets/mermaid.js'))
+    const mermaid = window.__markdangMermaid
+    mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', htmlLabels: false })
+    const { svg } = await mermaid.render('markdang-math-regression', 'flowchart LR\nA["$$\\frac{a}{b}$$"] --> B[End]')
+    return svg.includes('<mfrac')
+  }))
+
   await patch({ mdPluginOptions: { TaskLists: { enabled: true, label: true, labelAfter: true } } })
   await goto('- [ ] **Parent** `code`\n  - [x] Child')
   ok('task labels preserve formatted content and nested list layout', await page.evaluate(() => {

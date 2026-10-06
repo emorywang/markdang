@@ -75,6 +75,23 @@ test('KaTeX error color applies to ordinary inline and display math', () => {
   assert.ok(html.includes('#123456'))
 })
 
+test('KaTeX ignores inherited setting processors for inline, display, and fenced math', () => {
+  const settings = defaultSettings()
+  settings.mdPluginOptions.Katex.enableFencedBlocks = true
+  const renderer = createRenderer(settings)
+  const original = Object.getOwnPropertyDescriptor(Object.prototype, 'processor')
+  try {
+    Object.defineProperty(Object.prototype, 'processor', { value: () => true, configurable: true })
+    const formula = '\\href{javascript:alert(1)}{x}'
+    const html = renderer.render(`$${formula}$\n\n$$${formula}$$\n\n\`\`\`math\n${formula}\n\`\`\``).html
+    assert.equal([...html.matchAll(/class="katex"/g)].length, 3)
+    assert.doesNotMatch(html, /(?:href|src)\s*=/i)
+  } finally {
+    if (original) Object.defineProperty(Object.prototype, 'processor', original)
+    else Reflect.deleteProperty(Object.prototype, 'processor')
+  }
+})
+
 test('labels before task checkboxes retain parsed emphasis, code, and links once', () => {
   const settings = defaultSettings()
   settings.mdPluginOptions.TaskLists = { enabled: true, label: true, labelAfter: true }
