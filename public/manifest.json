@@ -1,7 +1,7 @@
 {
-  "name": "MarkDang",
-  "version": "1.0.2",
-  "version_name": "1.0.2",
+  "name": "__MSG_name__",
+  "version": "1.0.3",
+  "version_name": "1.0.3",
   "description": "__MSG_description__",
   "default_locale": "en",
   "manifest_version": 3,

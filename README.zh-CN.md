@@ -7,6 +7,8 @@ MarkDang 在 Chrome 和 Edge 中将 Markdown 文档转换为舒适的阅读视�
 [![Build](https://github.com/emorywang/markdang/actions/workflows/build.yml/badge.svg)](https://github.com/emorywang/markdang/actions/workflows/build.yml)
 [![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-orange)](LICENSE)
 
+**安装：** [Chrome 应用商店](https://chromewebstore.google.com/detail/fkmjcncaodjajnidcjjbdahokkohkcjl) · [Microsoft Edge 扩展商店](https://microsoftedge.microsoft.com/addons/detail/imnofphfgjcfgflicbhfnmkpfhjfilam)
+
 | 浅色阅读视图 | 深色阅读视图 |
 | --- | --- |
 | ![浅色阅读器](docs/screenshots/reader-light.png) | ![深色阅读器](docs/screenshots/reader-dark-outline.png) |
@@ -27,6 +29,14 @@ MDX 按 Markdown 读取，不执行 JSX、导入语句或 JavaScript。网页文
 
 ## 安装
 
+### 从浏览器商店安装
+
+通过上方的 Chrome 或 Edge 商店链接安装。
+
+如需读取本地文件或文件夹，在扩展详情中开启「允许访问文件网址」，再刷新已打开的文档。商店安装后，该浏览器权限默认关闭，必须由用户亲自开启。
+
+首次安装会打开欢迎页，提供示例文档和本地文件设置步骤。「打开扩展详情」按钮自动进入 Chrome 或 Edge 对应页面。欢迎页和弹窗显示实际权限状态，从扩展详情返回后会更新；后续版本更新不会再次弹出欢迎页。
+
 ### 从源码构建
 
 需要 Node.js **22.12 及以上**，推荐 24 LTS：
@@ -43,15 +53,11 @@ npm run build
 3. 选择生成的 `extension/` 目录，该目录中包含 `manifest.json`。
 4. 如需读取本地文件或文件夹，在扩展详情中开启「允许访问文件网址」，再刷新已打开的文档。商店安装后，该浏览器权限默认关闭，必须由用户亲自开启。
 
-首次安装会打开欢迎页，提供示例文档和本地文件设置步骤。「打开扩展详情」按钮自动进入 Chrome 或 Edge 对应页面。欢迎页和弹窗显示实际权限状态，从扩展详情返回后会更新；后续版本更新不会再次弹出欢迎页。
-
 请保留所选目录。重新构建后，重载扩展并刷新文档标签页。
 
 ### 从发布包安装
 
-[Releases](https://github.com/emorywang/markdang/releases) 提供发布包后，下载 `markdang-v<version>.zip`，解压到固定目录，再按上述步骤加载**该解压目录**。ZIP 根目录直接包含 `manifest.json`，内部没有额外的 `extension/` 文件夹。
-
-当前仓库尚未提供浏览器商店安装链接。
+从 [Releases](https://github.com/emorywang/markdang/releases) 下载 `markdang-v<version>.zip`，解压到固定目录，再按上述步骤加载**该解压目录**。ZIP 根目录直接包含 `manifest.json`，内部没有额外的 `extension/` 文件夹。
 
 ## 使用
 

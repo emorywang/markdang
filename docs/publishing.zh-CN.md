@@ -2,7 +2,7 @@
 
 [English](publishing.md) · [README](../README.zh-CN.md) · [商店填写文案](store-listing.zh-CN.md) · [来源核查](provenance.zh-CN.md)
 
-适用于当前 1.0.2，核对日期为 2026-10-06。CI 负责检查、构建和打包；合并不会自动创建 Release，也不会自动提交商店。开发者账号已注册后，按下面顺序操作即可。
+适用于 1.0.3；商店流程上次核对日期为 2026-10-06。CI 负责检查、构建和打包；合并不会自动创建 Release，也不会自动提交商店。开发者账号已注册后，按下面顺序操作即可。
 
 ## 1. 合并已验证的 PR
 
@@ -14,7 +14,7 @@
 
 ## 2. 下载真正的扩展 ZIP
 
-在成功的 main 构建页面底部，下载 **markdang-…** artifact。先解压下载文件，取出里面的 `markdang-v1.0.2.zip`。这个内层 ZIP 才是 Release 和商店使用的扩展包。
+在成功的 main 构建页面底部，下载 **markdang-…** artifact。先解压下载文件，取出里面的 `markdang-v1.0.3.zip`。这个内层 ZIP 才是 Release 和商店使用的扩展包。
 
 内层 ZIP 第一层应直接包含 `manifest.json`、`assets/`、`icons/`、`_locales/` 和许可文件。不要上传外层 artifact ZIP，也不要上传 GitHub 自动提供的 Source code ZIP。
 
@@ -30,23 +30,23 @@ npm run test:e2e
 node scripts/zip.mjs
 ```
 
-输出为 `dist/markdang-v1.0.2.zip`。Linux 浏览器安装可能需要 `npx playwright-core install --with-deps chromium`。平时只想重新构建并打包，运行 `npm run zip`。
+输出为 `dist/markdang-v1.0.3.zip`。Linux 浏览器安装可能需要 `npx playwright-core install --with-deps chromium`。平时只想重新构建并打包，运行 `npm run zip`。
 
 ## 3. 创建 GitHub Release
 
 1. 打开 [Releases](https://github.com/emorywang/markdang/releases)，选择 **Draft a new release**。
-2. 新建标签 **v1.0.2**，Target 选择合并后的 **main**。标签若已存在，先核对提交，不覆盖已发布标签。
-3. 标题填写 **MarkDang v1.0.2**，根据当前中英文更新日志填写 Release notes。
-4. 在附件区上传内层 `markdang-v1.0.2.zip`。如附校验文件，必须根据实际上传的包计算，不能沿用另一个构建的校验值。
+2. 新建标签 **v1.0.3**，Target 选择合并后的 **main**。标签若已存在，先核对提交，不覆盖已发布标签。
+3. 标题填写 **MarkDang v1.0.3**，根据当前中英文更新日志填写 Release notes。
+4. 在附件区上传内层 `markdang-v1.0.3.zip`。如附校验文件，必须根据实际上传的包计算，不能沿用另一个构建的校验值。
 5. 点击 **Publish release**。正式稳定版无需勾选 pre-release。
 
 Windows PowerShell 计算 SHA-256：
 
 ```powershell
-Get-FileHash .\markdang-v1.0.2.zip -Algorithm SHA256
+Get-FileHash .\markdang-v1.0.3.zip -Algorithm SHA256
 ```
 
-macOS/Linux 可运行 `shasum -a 256 markdang-v1.0.2.zip`。用户可下载 Release ZIP，解压后通过“加载已解压的扩展程序”安装；ZIP 本身不能像安装程序一样双击安装。
+macOS/Linux 可运行 `shasum -a 256 markdang-v1.0.3.zip`。用户可下载 Release ZIP，解压后通过“加载已解压的扩展程序”安装；ZIP 本身不能像安装程序一样双击安装。
 
 ## 4. 在 Chrome 商店建立条目
 
@@ -54,7 +54,7 @@ macOS/Linux 可运行 `shasum -a 256 markdang-v1.0.2.zip`。用户可下载 Rele
 
 1. 用已注册的账号打开 [Developer Dashboard](https://chrome.google.com/webstore/devconsole)。核实联系邮箱，完成账号要求的两步验证和身份资料。
 2. 选择 **Add new item / 新增项目**，上传内层扩展 ZIP。记下新生成的 MarkDang 扩展 ID。
-3. 在 **Package** 中核对产品名 MarkDang、版本 1.0.2 和 Manifest V3。
+3. 在 **Package** 中核对产品名 MarkDang、版本 1.0.3 和 Manifest V3。
 4. 进入 **Store listing / 商店详情**，建议分类选 **Tools / 工具**，默认语言选 English。
 5. 英文页粘贴英文详细说明，上传 `screenshots/en/` 的 5 张图。简体中文页使用中文版说明和 `screenshots/zh-CN/`。
 6. 包内还有 `zh_TW` 安装元数据。如果后台出现繁体中文项，使用资料包附带的繁体商店说明和中文截图；阅读界面仍明确说明只有英文与简体中文。
@@ -95,13 +95,19 @@ PlantUML 默认关闭，用户开启后才会把图表源码通过 HTTPS 发给 
 2. 在 **Distribution** 选择 **Public**，地区按实际计划选择。Unlisted 和 Private 也需要审核，不必额外建立测试条目。
 3. 保存各栏目，处理后台指出的必填项，选择 **Submit for review**。
 4. 建议取消“审核通过后自动发布”。通过后核对详情，再点击 **Publish**；延后发布需在审核通过后 30 天内完成。
-5. 上线后用商店安装版确认本地权限、阅读、语言、主题和支持链接，再将商店安装链接加入两份 README。
+5. 上线后用商店安装版确认本地权限、阅读、语言、主题和支持链接，确认两份 README 的安装链接指向对应商店条目。
 
 商店版和本地加载版可能有不同 ID，设置不会自动迁移。验证商店版时先停用旧的本地版本。
 
 ## 后续更新
 
-继续更新同一个商店条目。同步递增 `package.json`、锁文件和 `manifest.json` 的版本，`version_name` 与之对应；完成检查后上传新 ZIP，例如 1.0.2，并建立对应新 Release。保留旧的已发布 tag 和附件。
+继续更新同一个商店条目。同步递增 `package.json`、锁文件和 `manifest.json` 的版本，`version_name` 与之对应；完成检查后上传新 ZIP，并建立对应新 Release。保留旧的已发布 tag 和附件。
+
+## Microsoft Edge 更新
+
+在 Partner Center 中打开现有 MarkDang 条目，上传同一个 ZIP。Chrome 与 Edge 的扩展 ID、审核和更新流程彼此独立。各语言的商店说明都应保留本地文件权限指引：商店安装后默认禁止访问本地文件，用户需在扩展详情中亲自开启。
+
+MarkDang 无需账号、凭据或私密测试信息。在最后的提交页面，选择「不需要，测试人员无需任何附加信息即可访问和测试所有功能」。审核操作步骤可作为补充说明；Edge 审核通过后会自动发布提交的版本。
 
 ## 官方资料
 

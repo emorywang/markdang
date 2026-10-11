@@ -17,7 +17,11 @@ try {
   const automatic = /^zh(?:[-_]|$)/i.test(browserLanguage) ? 'zh-CN' : 'en'
   await options.waitForFunction(lang => document.documentElement.lang === lang, automatic)
   ok('a fresh install selects Auto and follows the browser UI language', await options.locator('select[aria-label]').inputValue() === 'auto')
-  ok('native extension metadata is localized without exposing message tokens', await options.evaluate(() => !chrome.runtime.getManifest().description.includes('__MSG_')))
+  ok('native extension metadata is localized without exposing message tokens', await options.evaluate(() => {
+    const manifest = chrome.runtime.getManifest()
+    return manifest.name === chrome.i18n.getMessage('name')
+      && !manifest.name.includes('__MSG_') && !manifest.description.includes('__MSG_')
+  }))
 
   const chooseLanguage = async language => {
     await options.locator('.rail-nav button').first().click()
@@ -36,9 +40,13 @@ try {
   await popup.evaluate(async () => { await document.fonts.ready })
   const navigationFits = () => popup.evaluate(() => {
     const boxes = [...document.querySelectorAll('.rail .brand-logo, .rail button')].map(element => element.getBoundingClientRect())
+    const tabs = [...document.querySelectorAll('.rail-nav button')].map(element => element.getBoundingClientRect())
+    const gaps = tabs.slice(1).map((box, index) => box.left - tabs[index].right)
     const centers = boxes.map(box => box.top + box.height / 2)
     return document.documentElement.scrollWidth <= innerWidth
       && boxes.every(box => box.left >= 0 && box.right <= innerWidth && box.top >= 0)
+      && boxes.every((box, index) => index === 0 || box.left >= boxes[index - 1].right)
+      && gaps.every(gap => gap >= 0 && gap <= 12)
       && Math.max(...centers) - Math.min(...centers) < 1
       && [...document.querySelectorAll('.rail button')].every(button => button.scrollWidth <= button.clientWidth)
   })

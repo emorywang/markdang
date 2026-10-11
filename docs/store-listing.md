@@ -2,11 +2,15 @@
 
 [简体中文](store-listing.zh-CN.md) · [Publishing steps](publishing.md)
 
-Copy each field's text into the matching dashboard field. These statements describe version 1.0.2. The package supplies the name and short description; editing this document alone does not change them.
+Copy each field's text into the matching dashboard field. These statements describe version 1.0.3. The package supplies the name and short description; editing this document alone does not change them.
 
 ## Name
 
-MarkDang
+| Language | Name |
+| --- | --- |
+| English | MarkDang — Markdown Reader |
+| Simplified Chinese | MarkDang — Markdown 阅读器 |
+| Traditional Chinese | MarkDang — Markdown 閱讀器 |
 
 ## Short description
 
