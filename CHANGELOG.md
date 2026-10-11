@@ -6,7 +6,21 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-Target version: 1.0.2.
+Target version: 1.0.3.
+
+### Added
+
+- Chrome Web Store and Microsoft Edge Add-ons installation links in both READMEs, with local-file setup instructions.
+
+### Changed
+
+- Describe the core reading function in the extension's English, Simplified Chinese, and Traditional Chinese store names.
+
+### Fixed
+
+- Size popup navigation buttons to their labels with consistent spacing, keeping Chinese tabs together and English labels on one line.
+
+## [1.0.2] - 2026-10-06
 
 ### Added
 
@@ -16,6 +30,7 @@ Target version: 1.0.2.
 
 - Set the bundled MarkDang favicon on rendered documents and directories, replacing previous icon candidates.
 - Open the correct Chrome or Edge extension details page and refresh file-access status when returning to settings.
+- Update bundled KaTeX and source-map-js dependencies to address known security vulnerabilities.
 
 ## [1.0.0] - 2026-10-01
 

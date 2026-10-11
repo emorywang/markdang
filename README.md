@@ -7,6 +7,8 @@ MarkDang (码刻档) renders Markdown documents in Chrome and Edge with a clean 
 [![Build](https://github.com/emorywang/markdang/actions/workflows/build.yml/badge.svg)](https://github.com/emorywang/markdang/actions/workflows/build.yml)
 [![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-orange)](LICENSE)
 
+**Install:** [Chrome Web Store](https://chromewebstore.google.com/detail/fkmjcncaodjajnidcjjbdahokkohkcjl) · [Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/imnofphfgjcfgflicbhfnmkpfhjfilam)
+
 | Light reading view | Dark reading view |
 | --- | --- |
 | ![Light reader](docs/screenshots/reader-light.png) | ![Dark reader](docs/screenshots/reader-dark-outline.png) |
@@ -27,6 +29,14 @@ The interface supports English and Simplified Chinese. **Auto** follows the brow
 
 ## Install
 
+### Browser stores
+
+Install using the Chrome or Edge store link above.
+
+To read local files or folders, open the extension's details and enable **Allow access to file URLs**, then reload any open document. This browser permission is off by default for store installations and must be enabled by the user.
+
+On first installation, MarkDang opens a welcome page with a sample document and local-file setup steps. Its **Extension details** button opens the appropriate Chrome or Edge page. The welcome page and popup show the current file-access status; returning from extension details updates that status. Extension updates do not reopen the welcome page.
+
 ### Build from source
 
 Use Node.js **22.12+** (24 LTS recommended) and npm:
@@ -43,15 +53,11 @@ npm run build
 3. Select the generated `extension/` directory, which contains `manifest.json`.
 4. To read local files or folders, open the extension's details and enable **Allow access to file URLs**, then reload any open document. This browser permission is off by default for store installations and must be enabled by the user.
 
-On first installation, MarkDang opens a welcome page with a sample document and local-file setup steps. Its **Extension details** button opens the appropriate Chrome or Edge page. The welcome page and popup show the current file-access status; returning from extension details updates that status. Extension updates do not reopen the welcome page.
-
 Keep the selected directory in place. After rebuilding, reload the extension and its document tabs.
 
 ### Install a release ZIP
 
-When a packaged release is available in [Releases](https://github.com/emorywang/markdang/releases), download `markdang-v<version>.zip` and extract it into a permanent directory. Load **that extraction directory** using the same steps. `manifest.json` is at the ZIP's root; there is no extra `extension/` directory inside it.
-
-This repository does not currently provide a store-install link.
+Download `markdang-v<version>.zip` from [Releases](https://github.com/emorywang/markdang/releases) and extract it into a permanent directory. Load **that extraction directory** using the same steps. `manifest.json` is at the ZIP's root; there is no extra `extension/` directory inside it.
 
 ## Use
 

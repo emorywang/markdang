@@ -1,4 +1,5 @@
 {
+  "name": { "message": "MarkDang — Markdown 閱讀器" },
   "description": { "message": "碼刻檔 —— 在瀏覽器中舒適閱讀 Markdown。無帳號、無訂閱、無遙測。" },
   "toggleSide": { "message": "切換側邊欄" },
   "toggleCentered": { "message": "切換置中" },
